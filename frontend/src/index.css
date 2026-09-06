@@ -1,0 +1,2896 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  color: #fff;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* =========================================
+   PREMIUM GLOWING BACKGROUND ANIMATION
+   ========================================= */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 140, 0, 0.1), transparent 40%),
+              radial-gradient(circle at 80% 80%, rgba(160, 32, 240, 0.1), transparent 40%);
+  z-index: -1;
+  animation: glowPulse 8s infinite ease-in-out;
+  pointer-events: none;
+}
+
+/* =========================================
+   CORE ANIMATIONS
+   ========================================= */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes floatUp { 0% { transform: translateY(100vh) scale(0.6); opacity: 0; } 50% { opacity: 0.6; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+@keyframes glowPulse { 0% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.1); } 100% { opacity: 0.5; transform: scale(1); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { to { transform: translateX(100%); opacity: 0; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* =========================================
+   AUTH STYLES
+   ========================================= */
+.auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; position: relative; overflow: hidden; }
+.glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 24px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); padding: 40px; width: 100%; max-width: 420px; z-index: 10; position: relative; animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+.logo-text { font-size: 2.5rem; font-weight: 800; background: linear-gradient(90deg, #ff8c00, #a020f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 10px; animation: glowPulse 4s infinite; }
+.input-field { width: 100%; padding: 15px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: #fff; margin-bottom: 15px; outline: none; transition: all 0.3s ease; }
+.input-field:focus { border-color: #ff8c00; box-shadow: 0 0 15px rgba(255, 140, 0, 0.3); background: rgba(0, 0, 0, 0.4); }
+.btn-primary { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-bottom: 15px; background: linear-gradient(90deg, #ff8c00, #a020f0); color: #fff; transition: all 0.3s ease; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
+.role-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+.role-btn { flex: 1; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; color: #fff; font-weight: 600; cursor: pointer; transition: 0.3s; }
+.role-btn.active { background: linear-gradient(90deg, #ff8c00, #a020f0); border-color: transparent; }
+.error-alert { background: rgba(255, 0, 0, 0.2); border: 1px solid #ff4444; color: #ff4444; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+.password-wrapper { position: relative; }
+.eye-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #ccc; }
+.terms-checkbox { margin-bottom: 20px; }
+.checkbox-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.9rem; color: #ccc; }
+.checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: #ff8c00; }
+.water-drop { position: absolute; bottom: -100px; background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(128, 0, 128, 0.2)); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; animation: floatUp 15s infinite linear; filter: blur(15px); pointer-events: none; z-index: 0; }
+.glow-orb { position: absolute; width: 300px; height: 300px; background: rgba(255, 165, 0, 0.2); filter: blur(80px); border-radius: 50%; animation: glowPulse 8s infinite ease-in-out; z-index: 0; }
+
+/* =========================================
+   UNIVERSAL LAYOUT (One Sidebar, One Top Bar)
+   ========================================= */
+.dashboard-layout { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar { width: 250px; background: rgba(15, 12, 41, 0.95); backdrop-filter: blur(10px); border-right: 1px solid rgba(255, 255, 255, 0.15); padding: 20px; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s ease; }
+.logo-gradient { font-size: 1.5rem; background: linear-gradient(90deg, #ff8c00, #a020f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 10px; color: #fff; text-decoration: none; transition: 0.3s; width: 100%; }
+.sidebar-link:hover, .sidebar-link.active { background: linear-gradient(90deg, #ff8c00, #a020f0); box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3); }
+.logout-btn-sidebar { background: rgba(255, 0, 0, 0.2); border: 1px solid #ff4444; color: white; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: auto; width: 100%; }
+
+/* Main Content */
+.main-content { flex: 1; padding: 20px; margin-left: 250px; min-height: 100vh; }
+
+/* Top Bar Header (Hamburger Left + Bell Right - Scrolls with page!) */
+.top-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.hamburger-btn { display: block; background: linear-gradient(90deg, #ff8c00, #a020f0); border: none; border-radius: 10px; color: white; font-size: 1.5rem; padding: 10px 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); transition: all 0.3s ease; }
+.hamburger-btn:hover { transform: scale(1.05); }
+.notification-wrapper { display: flex; justify-content: flex-end; z-index: 100; }
+
+/* Notification Panel */
+.bell-btn { width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(90deg, #ff8c00, #a020f0); border: 2px solid rgba(255, 255, 255, 0.2); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); transition: transform 0.3s; }
+.bell-btn:hover { transform: scale(1.1); }
+.badge-count { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; font-size: 0.7rem; padding: 3px 7px; border-radius: 50%; font-weight: bold; border: 2px solid #0f0c29; }
+.notification-panel { position: absolute; top: 55px; right: 0; width: 350px; max-width: calc(100vw - 40px); max-height: 70vh; background: rgba(15, 12, 41, 0.98); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); overflow: hidden; animation: slideDown 0.3s ease; }
+.notification-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.notification-actions { display: flex; gap: 10px; font-size: 0.8rem; }
+.mark-read { color: #ff8c00; cursor: pointer; }
+.clear-all { color: #ff4444; cursor: pointer; }
+.notification-list { max-height: 55vh; overflow-y: auto; }
+.notification-item { display: flex; gap: 10px; padding: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); transition: background 0.3s; }
+.notification-item.unread { background: rgba(255, 140, 0, 0.1); }
+.notification-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff8c00; margin-top: 8px; }
+.notification-item.unread .notification-dot { background: #00ff88; }
+.notification-content { flex: 1; }
+.notification-content h5 { font-size: 0.9rem; margin: 0 0 5px 0; }
+.notification-content p { font-size: 0.8rem; margin: 0; opacity: 0.8; }
+.notification-time { font-size: 0.7rem; opacity: 0.6; }
+
+/* =========================================
+   DASHBOARD & WIDGETS
+   ========================================= */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.user-profile-pill { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; }
+.welcome-banner { background: linear-gradient(135deg, #ff8c00, #a020f0); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 32px rgba(160, 32, 240, 0.4); }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.stat-card { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 20px; transition: transform 0.3s; }
+.stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); }
+.stat-icon { font-size: 2rem; }
+.stat-number { font-size: 2rem; font-weight: 700; }
+.section-title { margin-bottom: 15px; font-weight: 600; }
+.quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.action-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 20px; text-align: center; text-decoration: none; color: white; transition: all 0.3s ease; }
+.action-btn:hover { background: linear-gradient(90deg, #ff8c00, #a020f0); transform: scale(1.02); box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
+.skills-form-card, .skills-display-card { background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 30px; }
+.skill-tag { background: linear-gradient(90deg, #ff8c00, #a020f0); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; margin: 5px; }
+.toast-notification { position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #00ff88, #00cc66); color: #000; padding: 15px 25px; border-radius: 10px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3); z-index: 1000; animation: slideInRight 0.5s ease, fadeOut 0.5s ease 2.5s forwards; }
+.dashboard-loader { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; color: #fff; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }
+.loader-spinner { width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.2); border-top: 5px solid #ff8c00; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px; }
+
+/* =========================================
+   CHAT PAGE
+   ========================================= */
+.chat-page { display: flex; flex-direction: column; height: 100vh; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #fff; }
+.chat-header { background: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 15px; display: flex; align-items: center; gap: 15px; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.message-bubble { max-width: 70%; padding: 12px 15px; border-radius: 15px; font-size: 0.95rem; position: relative; word-wrap: break-word; }
+.message-bubble.mine { background: linear-gradient(90deg, #ff8c00, #a020f0); align-self: flex-end; border-bottom-right-radius: 5px; }
+.message-bubble.theirs { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); align-self: flex-start; border-bottom-left-radius: 5px; }
+.message-footer { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 5px; }
+.message-ticks { font-size: 0.9rem; font-weight: bold; }
+.single-tick { color: #888; }
+.double-tick { color: #00bfff; }
+.chat-input-container { background: rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); padding: 15px; display: flex; gap: 10px; }
+.chat-input { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 12px 20px; color: white; outline: none; }
+.file-upload-btn, .emoji-btn, .send-btn { background: linear-gradient(90deg, #ff8c00, #a020f0); border: none; border-radius: 50%; width: 45px; height: 45px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.3s; }
+.send-btn:hover, .file-upload-btn:hover, .emoji-btn:hover { transform: scale(1.1); }
+.typing-indicator { display: flex; gap: 5px; padding: 10px 15px; background: rgba(255, 255, 255, 0.1); border-radius: 15px; width: fit-content; margin-bottom: 10px; }
+.typing-indicator span { width: 8px; height: 8px; background: #ff8c00; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
+.chat-image { max-width: 250px; max-height: 250px; border-radius: 10px; margin-bottom: 5px; }
+.emoji-picker-container { position: absolute; bottom: 90px; right: 20px; z-index: 100; }
+
+/* =========================================
+   BROWSE & FILTERS
+   ========================================= */
+.browse-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+.browse-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.search-wrapper { position: relative; margin-bottom: 20px; }
+.search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; opacity: 0.7; }
+.search-wrapper .input-field { padding-left: 50px; border-radius: 30px; padding-top: 18px; padding-bottom: 18px; }
+.needs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+.need-card { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 25px; transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column; }
+.need-card:hover { transform: translateY(-8px); box-shadow: 0 10px 30px rgba(255, 140, 0, 0.2); border-color: #ff8c00; }
+.need-contact-numbers { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+.contact-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+.whatsapp-chip { background: rgba(37, 211, 102, 0.2); color: #25d366; border: 1px solid rgba(37, 211, 102, 0.3); }
+.emergency-chip { background: rgba(255, 68, 68, 0.2); color: #ff4444; border: 1px solid rgba(255, 68, 68, 0.3); }
+.filter-row { display: flex; gap: 15px; margin-top: 15px; }
+.filter-row .input-field { flex: 1; padding: 12px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; color: #fff; }
+
+/* =========================================
+   SETTINGS & ADMIN
+   ========================================= */
+.settings-content { max-width: 800px; margin: 0 auto; }
+.settings-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 30px; margin-bottom: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
+.settings-section-title { color: #ff8c00; font-size: 1.2rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 140, 0, 0.2); }
+.settings-grid { display: flex; gap: 30px; }
+.avatar-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.premium-avatar { width: 100px; height: 100px; background: linear-gradient(135deg, #ff8c00, #a020f0); border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 3px solid rgba(255, 255, 255, 0.2); }
+.switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background: linear-gradient(90deg, #ff8c00, #a020f0); }
+input:checked + .slider:before { transform: translateX(22px); }
+.profile-avatar-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #ff8c00; margin: 0 auto; display: block; }
+.delete-photo-btn { background: rgba(255, 0, 0, 0.2); border: 1px solid #ff4444; color: #ff4444; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.brand-preview-img { width: 150px; height: 150px; object-fit: cover; border-radius: 10px; border: 2px solid #ff8c00; }
+.danger-zone { border: 1px solid rgba(255, 68, 68, 0.3); background: rgba(255, 68, 68, 0.05); }
+.danger-zone-title { color: #ff4444; }
+
+/* Admin Tables & Charts */
+.admin-main-content { flex: 1; padding: 30px; color: #fff; margin-left: 250px; }
+.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.admin-badge { background: linear-gradient(90deg, #ff8c00, #a020f0); padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; }
+.admin-table-container { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.admin-table th, .admin-table td { padding: 12px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: left; }
+.admin-table th { background: rgba(255, 140, 0, 0.2); color: #ff8c00; }
+.admin-table tr:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-danger { background: rgba(255, 0, 0, 0.3); border: 1px solid #ff4444; color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer; margin-left: 5px; }
+.btn-sm { background: rgba(0, 255, 136, 0.2); border: 1px solid #00ff88; color: white; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+.role-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+.role-badge.admin { background: rgba(255, 140, 0, 0.2); color: #ff8c00; }
+.role-badge.employer { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+.role-badge.employee { background: rgba(0, 191, 255, 0.2); color: #00bfff; }
+.charts-grid, .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.chart-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 20px; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+.modal-content { background: rgba(30, 30, 50, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 30px; width: 90%; max-width: 500px; color: white; }
+.status-summary { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+.status-card { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; flex: 1; min-width: 150px; transition: all 0.3s ease; cursor: pointer; }
+.status-card:hover { transform: translateY(-3px); border-color: #ff8c00; }
+
+/* =========================================
+   LANDING, CONTACT & LEGAL
+   ========================================= */
+.landing-page { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #fff; min-height: 100vh; }
+.landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; position: sticky; top: 0; z-index: 100; background: rgba(15, 12, 41, 0.9); backdrop-filter: blur(10px); }
+.hero-section { display: flex; justify-content: center; align-items: center; padding: 100px 40px; gap: 50px; }
+.hero-title { font-size: 3rem; line-height: 1.2; margin-bottom: 20px; }
+.hero-subtitle { font-size: 1.1rem; color: #ccc; margin-bottom: 30px; line-height: 1.6; }
+.hero-logo-big { width: 350px; height: 350px; border-radius: 50%; box-shadow: 0 0 80px rgba(255, 140, 0, 0.3); animation: float 3s infinite ease-in-out; }
+.features-grid, .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto; }
+.feature-card, .step-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 30px; transition: transform 0.3s; }
+.feature-card:hover { transform: translateY(-10px); border-color: #ff8c00; }
+.contact-page { min-height: 100vh; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); padding: 40px 20px; }
+.contact-container { display: flex; gap: 30px; max-width: 1000px; margin: 0 auto; }
+.contact-info-panel, .contact-form-panel { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 30px; color: white; }
+.legal-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 40px; max-width: 800px; width: 100%; color: #fff; margin: 40px auto; }
+
+/* =========================================
+   BUG REPORT
+   ========================================= */
+.bug-float-btn { position: fixed; bottom: 20px; left: 20px; background: linear-gradient(90deg, #ff8c00, #a020f0); color: white; border: none; border-radius: 50%; width: 55px; height: 55px; font-size: 1.5rem; cursor: pointer; z-index: 1000; box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4); transition: transform 0.3s; }
+.bug-float-btn:hover { transform: scale(1.1); }
+.bug-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 1001; display: flex; justify-content: center; align-items: center; }
+.bug-modal { background: rgba(30, 30, 50, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 30px; width: 90%; max-width: 400px; color: white; }
+.bug-image-preview { max-width: 100%; height: auto; border-radius: 10px; border: 2px solid #ff8c00; margin-top: 10px; }
+
+/* =========================================
+   RESPONSIVE & MOBILE
+   ========================================= */
+@media (max-width: 768px) {
+  .hamburger-btn { display: block; }
+  /* Mobile Sidebar Drawer */
+  .sidebar { width: 100%; transform: translateX(-100%); padding: 30px; z-index: 2500; }
+  .sidebar-open { transform: translateX(0); }
+  /* Reset Main Content */
+  .main-content, .admin-main-content { margin-left: 0; padding-top: 80px; padding-left: 15px; padding-right: 15px; }
+  .notification-panel { right: 10px; width: calc(100vw - 20px); }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .quick-actions { grid-template-columns: 1fr; }
+  .needs-grid { grid-template-columns: 1fr; }
+  .charts-grid, .analytics-grid { grid-template-columns: 1fr; }
+  .admin-table { font-size: 0.8rem; }
+  .admin-table thead { display: none; }
+  .admin-table tr { display: block; margin-bottom: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 15px; }
+  .admin-table td { display: flex; justify-content: space-between; padding: 8px 0; border: none; text-align: right; }
+  .admin-table td::before { content: attr(data-label); font-weight: bold; color: #ff8c00; text-align: left; margin-right: auto; padding-right: 10px; }
+  .hero-section { flex-direction: column; text-align: center; padding: 50px 20px; gap: 30px; }
+  .contact-container { flex-direction: column; }
+  .settings-grid { flex-direction: column; align-items: center; }
+  .status-summary { flex-direction: column; }
+  .status-card { width: 100%; }
+  .bug-actions { flex-direction: column; width: 100%; }
+  .bug-actions .btn-sm, .bug-actions .btn-danger { width: 100%; text-align: center; }
+}
+
+@media (max-width: 480px) {
+  .logo-text { font-size: 2rem; }
+  .hero-title { font-size: 2rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .glass-card { padding: 25px; }
+}
+/* =========================================
+   A1 FINAL GLOBAL RESPONSIVE OVERRIDE (LAST)
+   ========================================= */
+
+/* 1. DESKTOP DEFAULTS */
+@media (min-width: 769px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+  .sidebar {
+    width: 250px !important;
+    left: 0 !important;
+    transform: none !important; /* Desktop sidebar stays open */
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 250px !important;
+    padding-top: 20px !important;
+  }
+  .top-bar-header {
+    margin-bottom: 20px !important;
+    margin-top: 0 !important;
+  }
+}
+
+/* 2. MOBILE & TABLET FIXES */
+@media (max-width: 768px) {
+  /* Hamburger - Perfectly Fixed Top Left */
+  .hamburger-btn {
+    display: block !important;
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 9999 !important;
+    margin-bottom: 0 !important; /* REMOVED the weird margin */
+  }
+
+  /* Notification Bell - Perfectly Fixed Top Right */
+  .notification-wrapper {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 9999 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Mobile Sidebar Drawer (Slides in) */
+  .sidebar {
+    width: 100% !important;
+    transform: translateX(-100%) !important;
+    z-index: 10000 !important;
+    transition: transform 0.3s ease !important;
+  }
+  .sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Main Content adjustments (Clears the fixed buttons) */
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 70px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  /* Reset top-bar header so it doesn't push things down */
+  .top-bar-header {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Admin Header - Stack vertically so it doesn't get cut off */
+  .admin-header,
+  .topbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* Status Cards - Stack vertically */
+  .status-summary {
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .status-card {
+    width: 100% !important;
+    min-width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Admin Tables - Turn into stacked cards (Fix overflows) */
+  .admin-table thead {
+    display: none !important;
+  }
+  .admin-table tr {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 15px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 15px !important;
+  }
+  .admin-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    text-align: right !important;
+    width: 100% !important;
+    padding: 10px 0 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  .admin-table td::before {
+    content: attr(data-label) !important;
+    font-weight: bold !important;
+    color: #ff8c00 !important;
+    text-align: left !important;
+    margin-right: auto !important;
+    padding-right: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Make all action buttons full width and stack on mobile */
+  .bug-actions,
+  .chat-action-buttons,
+  .danger-zone-buttons {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .bug-actions .btn-sm,
+  .bug-actions .btn-danger,
+  .chat-action-buttons .btn-sm,
+  .chat-action-buttons .btn-danger,
+  .danger-zone-buttons .btn-sm,
+  .danger-zone-buttons .btn-danger {
+    width: 100% !important;
+    text-align: center !important;
+    margin-top: 5px !important;
+  }
+}
+/* =========================================
+   FINAL FIX: NAVBAR & BELL SCROLL WITH PAGE
+   ========================================= */
+
+/* Make the top bar flow naturally */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  position: relative !important;
+}
+
+/* Hamburger - Scrolls with the page */
+.hamburger-btn {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 10 !important;
+  display: block !important;
+}
+
+/* Notification Bell - Scrolls with the page */
+.notification-wrapper {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 10 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+/* Desktop Fix - Hide hamburger, keep sidebar fixed */
+@media (min-width: 769px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+  .sidebar {
+    position: fixed !important;
+    width: 250px !important;
+    left: 0 !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 250px !important;
+  }
+}
+
+/* Mobile Fix - Show hamburger, move sidebar to drawer */
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: block !important;
+  }
+  .sidebar {
+    width: 100% !important;
+    transform: translateX(-100%) !important;
+    z-index: 10000 !important;
+  }
+  .sidebar-open {
+    transform: translateX(0) !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+  }
+}
+/* =========================================
+   FINAL A1 FIX: ADMIN TABLE & HAMBURGER POSITION
+   ========================================= */
+
+/* Make hamburger fixed at top-left ONLY on mobile */
+@media (max-width: 768px) {
+  .hamburger-btn {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 99999 !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+    border-radius: 10px !important;
+  }
+
+  /* Sidebar slides in from the left */
+  .sidebar {
+    width: 100% !important;
+    transform: translateX(-100%) !important;
+    z-index: 100000 !important;
+    background: rgba(15, 12, 41, 0.98) !important;
+  }
+  .sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Main content - clear the fixed buttons */
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 60px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  /* Admin Header - Stack vertically */
+  .admin-header,
+  .topbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Admin Table - Turn into stacked cards */
+  .admin-table thead {
+    display: none !important;
+  }
+  .admin-table tr {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 15px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 10px !important;
+  }
+  .admin-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    text-align: right !important;
+    width: 100% !important;
+    padding: 8px 0 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  .admin-table td::before {
+    content: attr(data-label) !important;
+    font-weight: bold !important;
+    color: #ff8c00 !important;
+    text-align: left !important;
+    margin-right: auto !important;
+    padding-right: 10px !important;
+    flex-shrink: 0 !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Action Buttons - Stack full width */
+  .bug-actions,
+  .chat-action-buttons,
+  .danger-zone-buttons {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 5px !important;
+  }
+  .bug-actions .btn-sm,
+  .bug-actions .btn-danger,
+  .chat-action-buttons .btn-sm,
+  .chat-action-buttons .btn-danger,
+  .danger-zone-buttons .btn-sm,
+  .danger-zone-buttons .btn-danger {
+    width: 100% !important;
+    text-align: center !important;
+    padding: 10px !important;
+  }
+}
+/* =========================================
+   FINAL FIX: BELL TOP RIGHT & BOTH SCROLL WITH PAGE
+   ========================================= */
+
+/* Top Bar Header - Normal flow (Scrolls with the page!) */
+.top-bar-header {
+  position: relative !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+  padding: 0 !important;
+}
+
+/* Hamburger - Left, Scrolls with page */
+.hamburger-btn {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 100 !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
+/* Notification Bell - Right, Scrolls with page */
+.notification-wrapper {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 100 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+}
+
+/* Notification Panel - Fits screen, no cut-offs */
+.notification-panel {
+  position: absolute !important;
+  top: 50px !important;
+  right: 0 !important;
+  width: 350px !important;
+  max-width: calc(100vw - 20px) !important;
+  border-radius: 16px !important;
+}
+
+/* Mobile Perfect Fit */
+@media (max-width: 768px) {
+  /* Top bar padding to clear the sidebar */
+  .main-content,
+  .admin-main-content {
+    padding-top: 20px !important; /* No huge fixed gaps */
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  /* Sidebar - Drawer */
+  .sidebar {
+    width: 100% !important;
+    transform: translateX(-100%) !important;
+    z-index: 100000 !important;
+  }
+  .sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Force the Bell Panel to be full width on mobile so it never cuts off */
+  .notification-panel {
+    width: calc(100vw - 20px) !important;
+    right: 0 !important;
+    left: auto !important;
+  }
+}
+/* =========================================
+   FINAL FIX: REMOVE LEFT PURPLE BLOCK ON MOBILE
+   ========================================= */
+@media (max-width: 768px) {
+  /* Kill the body glow that creates the purple side gradient */
+  body::before {
+    display: none !important;
+  }
+
+  /* Force main content to fill the ENTIRE screen width */
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure sidebar is completely off-screen unless opened */
+  .sidebar {
+    left: -100% !important;
+    width: 100% !important;
+    transform: translateX(-100%) !important;
+    background: #0f0c29 !important;
+  }
+  .sidebar-open {
+    left: 0 !important;
+    transform: translateX(0) !important;
+  }
+}
+/* =========================================
+   A1 EXPERT LANDING PAGE CSS (FINAL)
+   ========================================= */
+.landing-page {
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  padding-bottom: 0;
+}
+
+/* ===== NAVIGATION ===== */
+.landing-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(15, 12, 41, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.landing-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-logo-img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+}
+
+.landing-logo h1 {
+  font-size: 1.6rem;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 1px;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.landing-link {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.landing-link:hover {
+  color: #ff8c00;
+  background: rgba(255, 140, 0, 0.1);
+}
+
+.landing-nav-links .btn {
+  margin-bottom: 0; /* Remove default margin for buttons in nav */
+}
+
+.landing-nav-links .btn-primary,
+.landing-nav-links .btn-google {
+  width: auto;
+  padding: 10px 22px;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+/* ===== HERO ===== */
+.hero-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 40px;
+  gap: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero-content {
+  max-width: 550px;
+}
+
+.hero-title {
+  font-size: 3.2rem;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: #ccc;
+  margin-bottom: 35px;
+  line-height: 1.7;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.hero-buttons .btn {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.hero-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-logo-big {
+  width: 350px;
+  height: 350px;
+  border-radius: 50%;
+  box-shadow: 0 0 100px rgba(160, 32, 240, 0.4), 0 0 50px rgba(255, 140, 0, 0.3);
+  animation: float 4s infinite ease-in-out;
+}
+
+/* ===== SECTIONS (Features, How It Works) ===== */
+.features-section,
+.how-it-works-section {
+  padding: 80px 40px;
+  text-align: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-heading {
+  font-size: 2.4rem;
+  margin-bottom: 40px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+}
+
+.feature-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-12px);
+  border-color: #ff8c00;
+  box-shadow: 0 15px 40px rgba(255, 140, 0, 0.15);
+}
+
+.feature-icon {
+  font-size: 2.8rem;
+  margin-bottom: 18px;
+  color: #ff8c00;
+  display: inline-block;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 15px;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(5deg);
+  color: #a020f0;
+  background: rgba(160, 32, 240, 0.1);
+}
+
+.feature-card h3 {
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.feature-card p {
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Steps */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 25px;
+}
+
+.step-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  transition: all 0.4s;
+}
+
+.step-card:hover {
+  transform: translateY(-5px);
+  border-color: #a020f0;
+}
+
+.step-number {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  margin: 0 auto 18px;
+  box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4);
+}
+
+.step-card h3 {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.step-card p {
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* ===== STATS ===== */
+.stats-section {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  padding: 70px 40px;
+  background: rgba(255, 255, 255, 0.03);
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-box {
+  text-align: center;
+  min-width: 120px;
+}
+
+.stat-box h2 {
+  font-size: 2.8rem;
+  color: #ff8c00;
+  font-weight: 800;
+  margin-bottom: 5px;
+  text-shadow: 0 0 30px rgba(255, 140, 0, 0.3);
+}
+
+.stat-box p {
+  color: #ccc;
+  font-size: 0.95rem;
+}
+
+/* ===== CTA ===== */
+.cta-section {
+  text-align: center;
+  padding: 90px 40px;
+  background: linear-gradient(135deg, rgba(255, 140, 0, 0.1), rgba(160, 32, 240, 0.1));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cta-section h2 {
+  font-size: 2.8rem;
+  margin-bottom: 15px;
+  font-weight: 800;
+}
+
+.cta-section p {
+  color: #ccc;
+  margin-bottom: 30px;
+  font-size: 1.1rem;
+}
+
+.cta-section .btn {
+  width: auto;
+  padding: 16px 40px;
+  font-size: 1.1rem;
+}
+
+/* ===== FOOTER ===== */
+.landing-footer {
+  background: #0d0a1f;
+  border-top: 1px solid rgba(255,  255, 255, 0.1);
+  padding: 60px 40px 20px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.footer-logo-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.footer-logo h2 {
+  font-size: 1.5rem;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.footer-desc {
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.footer-heading {
+  color: #fff;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.footer-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-links li {
+  margin-bottom: 12px;
+}
+
+.footer-links a {
+  color: #aaa;
+  text-decoration: none;
+  transition: all 0.3s;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.footer-links a:hover {
+  color: #ff8c00;
+  padding-left: 8px;
+}
+
+.footer-socials {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.footer-social-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.footer-social-icon:hover {
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(255, 140, 0, 0.3);
+  color: #fff;
+}
+
+.footer-newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-newsletter-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 12px 15px;
+  color: white;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.footer-newsletter-input:focus {
+  border-color: #ff8c00;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.2);
+}
+
+.footer-newsletter-btn {
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.footer-newsletter-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(255, 140, 0, 0.3);
+}
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 40px auto 0;
+  padding-top: 25px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ===== RESPONSIVE LANDING ===== */
+@media (max-width: 768px) {
+  .landing-nav {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px 20px;
+  }
+  
+  .landing-nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 50px 20px;
+    gap: 40px;
+  }
+  
+  .hero-content {
+    max-width: 100%;
+  }
+  
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+  
+  .hero-buttons {
+    justify-content: center;
+  }
+  
+  .hero-logo-big {
+    width: 220px;
+    height: 220px;
+  }
+  
+  .features-section,
+  .how-it-works-section {
+    padding: 50px 20px;
+  }
+  
+  .section-heading {
+    font-size: 2rem;
+  }
+  
+  .features-grid,
+  .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .stats-section {
+    gap: 30px;
+    padding: 50px 20px;
+  }
+  
+  .stat-box h2 {
+    font-size: 2.2rem;
+  }
+  
+  .cta-section {
+    padding: 60px 20px;
+  }
+  
+  .cta-section h2 {
+    font-size: 2.2rem;
+  }
+  
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .footer-heading::after {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .footer-links a {
+    justify-content: center;
+  }
+  
+  .footer-socials {
+    justify-content: center;
+  }
+  
+  .footer-newsletter-form {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .cta-section h2 {
+    font-size: 1.8rem;
+  }
+}
+/* =========================================
+   A1 LEGAL & PRIVACY PAGES CSS (FINAL)
+   ========================================= */
+.legal-page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+}
+
+.legal-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  padding: 50px;
+  max-width: 850px;
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Header */
+.legal-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  color: #ff8c00;
+  display: inline-flex;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 15px;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.2);
+}
+
+.legal-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+.legal-updated {
+  opacity: 0.7;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+/* Content Sections */
+.legal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.legal-section {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 25px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.legal-section:hover {
+  border-color: rgba(255, 140, 0, 0.4);
+  transform: translateX(5px);
+}
+
+.legal-section-icon {
+  font-size: 1.5rem;
+  color: #ff8c00;
+  flex-shrink: 0;
+  margin-top: 5px;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.legal-section h2 {
+  color: #ff8c00;
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+}
+
+.legal-section p {
+  line-height: 1.8;
+  color: #ccc;
+  font-size: 1rem;
+}
+
+.legal-section ul {
+  margin-top: 10px;
+  padding-left: 20px;
+  list-style-type: none;
+}
+
+.legal-section ul li {
+  position: relative;
+  padding-left: 25px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+  color: #ccc;
+}
+
+.legal-section ul li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #ff8c00;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.legal-section strong {
+  color: #fff;
+}
+
+/* Contact Info in Legal */
+.legal-contact-info {
+  margin-top: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-contact-info p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.legal-contact-info p svg {
+  color: #ff8c00;
+}
+
+/* Footer */
+.legal-footer {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legal-footer .btn {
+  width: auto;
+  padding: 12px 30px;
+  font-size: 0.95rem;
+}
+
+/* Responsive Legal Pages */
+@media (max-width: 768px) {
+  .legal-page-container {
+    padding: 20px 15px;
+  }
+
+  .legal-card {
+    padding: 25px;
+  }
+
+  .legal-title {
+    font-size: 2rem;
+  }
+
+  .legal-section {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .legal-section-icon {
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .legal-title {
+    font-size: 1.8rem;
+  }
+
+  .legal-content {
+    gap: 20px;
+  }
+
+  .legal-section h2 {
+    font-size: 1.1rem;
+  }
+}
+/* =========================================
+   A1 CONTACT PAGE CSS (FINAL)
+   ========================================= */
+.contact-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  padding: 40px 20px;
+  color: #fff;
+}
+
+.contact-header {
+  text-align: center;
+  margin-bottom: 50px;
+  padding-top: 20px;
+}
+
+.contact-title {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 15px;
+  animation: glowPulse 4s infinite;
+}
+
+.contact-subtitle {
+  color: #ccc;
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.contact-container {
+  display: flex;
+  gap: 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+  margin-bottom: 60px;
+}
+
+/* Info Panel */
+.contact-info-panel {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.panel-heading {
+  color: #ff8c00;
+  margin-bottom: 25px;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 140, 0, 0.2);
+  padding-bottom: 15px;
+}
+
+.contact-info-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.contact-info-item:hover {
+  background: rgba(255, 140, 0, 0.08);
+  transform: translateX(5px);
+}
+
+.contact-info-icon {
+  font-size: 1.5rem;
+  color: #ff8c00;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.contact-info-item h4 {
+  margin-bottom: 4px;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.contact-info-item a, .contact-info-item p {
+  color: #ccc;
+  text-decoration: none;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.contact-info-item a:hover {
+  color: #ff8c00;
+}
+
+/* Socials */
+.contact-socials {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.contact-socials h4 {
+  margin-bottom: 15px;
+  color: #fff;
+}
+
+.social-links {
+  display: flex;
+  gap: 12px;
+}
+
+.social-icon {
+  width: 45px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 1.2rem;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.social-icon:hover {
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(255, 140, 0, 0.3);
+  color: #fff;
+}
+
+/* Form Panel */
+.contact-form-panel {
+  flex: 2;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.contact-form-panel .input-field {
+  margin-bottom: 15px;
+}
+
+.contact-form-panel .input-field:focus {
+  border-color: #ff8c00;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.3);
+}
+
+.contact-form-panel .btn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Alerts */
+.success-alert, .error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+/* FAQ Section */
+.contact-faq-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.contact-faq-section h2 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 40px;
+  font-size: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.contact-faq-section h2 svg {
+  color: #ff8c00;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.faq-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 25px;
+  transition: all 0.3s;
+}
+
+.faq-item:hover {
+  border-color: #ff8c00;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.faq-item h4 {
+  color: #ff8c00;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+.faq-item p {
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Back to Home */
+.contact-back-home {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.contact-back-home .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  padding: 12px 30px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .contact-container {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .contact-page {
+    padding: 20px 15px;
+  }
+
+  .contact-title {
+    font-size: 2.2rem;
+  }
+
+  .contact-info-panel, .contact-form-panel {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact-title {
+    font-size: 1.8rem;
+  }
+  
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================================
+   A1 LEGAL & PRIVACY PAGES CSS (FINAL)
+   ========================================= */
+.legal-page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+}
+
+.legal-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  padding: 50px;
+  max-width: 850px;
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+/* Header */
+.legal-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  color: #ff8c00;
+  display: inline-flex;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 15px;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.2);
+}
+
+.legal-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+.legal-updated {
+  opacity: 0.7;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+/* Content Sections */
+.legal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.legal-section {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 25px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.legal-section:hover {
+  border-color: rgba(255, 140, 0, 0.4);
+  transform: translateX(5px);
+}
+
+.legal-section-icon {
+  font-size: 1.5rem;
+  color: #ff8c00;
+  flex-shrink: 0;
+  margin-top: 5px;
+  background: rgba(255, 140, 0, 0.1);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.legal-section h2 {
+  color: #ff8c00;
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+}
+
+.legal-section p {
+  line-height: 1.8;
+  color: #ccc;
+  font-size: 1rem;
+}
+
+.legal-section ul {
+  margin-top: 10px;
+  padding-left: 20px;
+  list-style-type: none;
+}
+
+.legal-section ul li {
+  position: relative;
+  padding-left: 25px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+  color: #ccc;
+}
+
+.legal-section ul li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #ff8c00;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.legal-section strong {
+  color: #fff;
+}
+
+/* Contact Info in Legal */
+.legal-contact-info {
+  margin-top: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legal-contact-info p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.legal-contact-info p svg {
+  color: #ff8c00;
+}
+
+/* Footer */
+.legal-footer {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legal-footer .btn {
+  width: auto;
+  padding: 12px 30px;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Responsive Legal Pages */
+@media (max-width: 768px) {
+  .legal-page-container {
+    padding: 20px 15px;
+  }
+
+  .legal-card {
+    padding: 25px;
+  }
+
+  .legal-title {
+    font-size: 2rem;
+  }
+
+  .legal-section {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .legal-section-icon {
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .legal-title {
+    font-size: 1.8rem;
+  }
+
+  .legal-content {
+    gap: 20px;
+  }
+
+  .legal-section h2 {
+    font-size: 1.1rem;
+  }
+}
+/* =========================================
+   A1 AUTH PAGES CSS (Login, Signup, Forgot)
+   ========================================= */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  z-index: 10;
+  position: relative;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-avatar {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 140, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 20px;
+}
+
+.logo-text {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  margin-bottom: 10px;
+  animation: glowPulse 4s infinite;
+}
+
+.brand-link {
+  color: #ff8c00;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.brand-link:hover {
+  color: #a020f0;
+}
+
+.input-field {
+  width: 100%;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  margin-bottom: 15px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.input-field:focus {
+  border-color: #ff8c00;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 15px;
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  color: #fff;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
+}
+
+.role-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.role-btn.active {
+  background: linear-gradient(90deg, #ff8c00, #a020f0);
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+}
+
+.error-alert {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+  animation: slideDown 0.3s ease;
+}
+
+.auth-divider {
+  text-align: center;
+  color: #aaa;
+  margin: 15px 0;
+  font-size: 0.9rem;
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.eye-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #ccc;
+  transition: color 0.3s;
+}
+
+.eye-toggle:hover {
+  color: #ff8c00;
+}
+
+/* Water Drops and Glow Orbs */
+.water-drop {
+  position: absolute;
+  bottom: -100px;
+  background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(128, 0, 128, 0.2));
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  animation: floatUp 15s infinite linear;
+  filter: blur(15px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 165, 0, 0.2);
+  filter: blur(80px);
+  border-radius: 50%;
+  animation: glowPulse 8s infinite ease-in-out;
+  z-index: 0;
+}
+
+/* Spinning icon */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .glass-card {
+    padding: 25px;
+  }
+  
+  .logo-text {
+    font-size: 2rem;
+  }
+}
+/* =========================================
+   ABSOLUTE FINAL FIX - FORCE TOP BAR VISIBLE
+   ========================================= */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  position: relative !important;
+  width: 100% !important;
+  margin-bottom: 20px !important;
+}
+
+.hamburger-btn {
+  display: block !important;
+  background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: white !important;
+  padding: 10px 14px !important;
+  font-size: 1.5rem !important;
+}
+
+.notification-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+.sidebar-footer {
+  margin-top: auto !important;
+  padding-top: 20px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.logout-btn-sidebar {
+  display: block !important;
+  width: 100% !important;
+  background: rgba(255, 0, 0, 0.2) !important;
+  border: 1px solid #ff4444 !important;
+  color: white !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* Desktop: Hide hamburger */
+@media (min-width: 769px) {
+  .hamburger-btn { display: none !important; }
+  .main-content, .admin-main-content { margin-left: 250px !important; padding-top: 20px !important; }
+}
+
+/* Mobile: Show hamburger */
+@media (max-width: 768px) {
+  .hamburger-btn { display: flex !important; align-items: center !important; }
+  .main-content, .admin-main-content { margin-left: 0 !important; padding-top: 20px !important; }
+}
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-bottom: 20px !important;
+}
+.hamburger-btn { display: block !important; }
+.notification-wrapper { display: flex !important; justify-content: flex-end !important; }
+.sidebar-footer { margin-top: auto !important; padding-top: 20px !important; }
+.logout-btn-sidebar { display: block !important; width: 100% !important; }
+/* =========================================
+   FINAL FIX: DESKTOP VS MOBILE LAYOUT
+   ========================================= */
+
+/* DESKTOP VIEW (Above 768px) */
+@media (min-width: 769px) {
+  /* 1. Hide hamburger on desktop */
+  .hamburger-btn {
+    display: none !important;
+  }
+
+  /* 2. Sidebar is fixed and ALWAYS visible */
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 250px !important;
+    height: 100vh !important;
+    background: rgba(15, 12, 41, 0.98) !important;
+    z-index: 1000 !important;
+  }
+
+  /* 3. Main content clears the sidebar */
+  .main-content,
+  .admin-main-content {
+    margin-left: 250px !important;
+    padding-top: 20px !important;
+  }
+
+  /* 4. Top bar puts Bell on the right (Hamburger hidden) */
+  .top-bar-header {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* 5. Logout button pinned to bottom of sidebar (DESKTOP) */
+  .sidebar-footer {
+    margin-top: auto !important;
+    padding-top: 20px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  .logout-btn-sidebar {
+    display: block !important;
+    width: 100% !important;
+    background: rgba(255, 0, 0, 0.2) !important;
+    border: 1px solid #ff4444 !important;
+    color: white !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+  }
+}
+
+/* MOBILE VIEW (Up to 768px) */
+@media (max-width: 768px) {
+  /* 1. Show hamburger on mobile */
+  .hamburger-btn {
+    display: flex !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    color: white !important;
+    padding: 10px 14px !important;
+    font-size: 1.5rem !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+  }
+
+  /* 2. Sidebar hidden by default, slides in on click */
+  .sidebar {
+    position: fixed !important;
+    left: -100% !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 100% !important;
+    height: 100vh !important;
+    background: rgba(15, 12, 41, 0.98) !important;
+    z-index: 99999 !important;
+  }
+  .sidebar-open {
+    left: 0 !important;
+  }
+
+  /* 3. Main content takes full width */
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  /* 4. Top bar puts Hamburger LEFT, Bell RIGHT */
+  .top-bar-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* 5. Logout pinned to bottom of mobile sidebar */
+  .sidebar-footer {
+    margin-top: auto !important;
+    padding-top: 20px !important;
+  }
+  .logout-btn-sidebar {
+    display: block !important;
+    width: 100% !important;
+  }
+}
+/* =========================================
+   REMOVE DUPLICATE FLOATING NAV & BELL
+   ========================================= */
+
+/* Hide the floating (fixed) duplicate icons completely */
+.hamburger-btn,
+.notification-wrapper {
+  position: absolute !important;
+  top: -9999px !important; /* Hidden off-screen, so only top-bar-header ones show */
+  left: -9999px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* Force the real Top Bar Header to be the only visible ones */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  position: relative !important;
+  z-index: 100 !important;
+  margin-bottom: 20px !important;
+}
+
+/* Ensure the real hamburger and bell inside the top bar are visible */
+.top-bar-header .hamburger-btn,
+.top-bar-header .notification-wrapper {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+/* Desktop: Hide hamburger, keep Bell */
+@media (min-width: 769px) {
+  .top-bar-header .hamburger-btn {
+    display: none !important;
+  }
+}
+
+/* Mobile: Show both properly */
+@media (max-width: 768px) {
+  .top-bar-header .hamburger-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+/* =========================================
+   ABSOLUTE FINAL FIX - FORCE NAV TO SHOW
+   ========================================= */
+
+/* 1. TOP BAR - ALWAYS VISIBLE */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: auto !important;
+  margin-bottom: 20px !important;
+  padding: 0 !important;
+}
+
+/* 2. HAMBURGER & BELL - FORCE SHOW */
+.hamburger-btn {
+  display: flex !important;
+  background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: white !important;
+  font-size: 1.5rem !important;
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+}
+
+.notification-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+/* 3. LOGOUT - FORCE SHOW */
+.sidebar-footer {
+  margin-top: auto !important;
+  padding-top: 20px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.logout-btn-sidebar {
+  display: block !important;
+  width: 100% !important;
+  background: rgba(255, 0, 0, 0.2) !important;
+  border: 1px solid #ff4444 !important;
+  color: white !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* 4. DESKTOP LAYOUT (Above 768px) */
+@media (min-width: 769px) {
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 250px !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 250px !important;
+    padding-top: 20px !important;
+  }
+  .top-bar-header .hamburger-btn {
+    display: none !important;
+  }
+}
+
+/* 5. MOBILE LAYOUT (Below 768px) */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    left: -100% !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 100% !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+  }
+  .sidebar-open {
+    left: 0 !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+  .top-bar-header .hamburger-btn {
+    display: flex !important;
+  }
+}
+/* =========================================
+   FINAL FORCE: MOBILE NAVBAR SHOW & SCROLL
+   ========================================= */
+
+/* Force Top Bar Header to display for all screens */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  position: relative !important;  /* Scrolls with page, no fixed */
+  z-index: 100 !important;
+  margin-bottom: 20px !important;
+  padding: 0 !important;
+}
+
+/* Hamburger - Force visible on mobile only */
+.hamburger-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: white !important;
+  font-size: 1.5rem !important;
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+}
+
+/* Notification Bell - Force visible on all screens */
+.notification-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+/* Desktop: Hide Hamburger, Keep Bell */
+@media (min-width: 769px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+}
+
+/* Mobile: Show Hamburger & Keep Bell */
+@media (max-width: 768px) {
+  /* Mobile Sidebar Drawer - Hidden offscreen, slides in */
+  .sidebar {
+    position: fixed !important;
+    left: -100% !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 100% !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+  }
+  .sidebar-open {
+    left: 0 !important;
+  }
+
+  /* Main Content Full Width (No sidebar margin) */
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+
+  /* Top Bar Header Scrolls With Page (Already relative) */
+  .top-bar-header {
+    margin-bottom: 20px !important;
+  }
+}
+/* =========================================
+   FINAL ULTIMATE OVERRIDE - NO MORE HIDING
+   ========================================= */
+
+/* 1. Top Bar - Force show & scroll with page */
+.top-bar-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  position: relative !important; /* Scrolls with page */
+  z-index: 200 !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin-bottom: 20px !important;
+}
+
+/* 2. Hamburger - Force show on mobile */
+.hamburger-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: white !important;
+  font-size: 1.5rem !important;
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+}
+
+/* 3. Bell - Force show */
+.notification-wrapper {
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+/* 4. Logout - Force show */
+.sidebar-footer {
+  margin-top: auto !important;
+  padding-top: 20px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.logout-btn-sidebar {
+  display: block !important;
+  width: 100% !important;
+  background: rgba(255, 0, 0, 0.2) !important;
+  border: 1px solid #ff4444 !important;
+  color: white !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* 5. Click-Outside Overlay */
+.sidebar-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 99998 !important;
+  display: block !important;
+}
+
+/* 6. Desktop Layout (Hide hamburger, fixed sidebar) */
+@media (min-width: 769px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+    width: 250px !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 250px !important;
+    padding-top: 20px !important;
+  }
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* 7. Mobile Layout (Show hamburger, drawer sidebar) */
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: flex !important;
+  }
+  .sidebar {
+    position: fixed !important;
+    left: -100% !important;
+    top: 0 !important;
+    transform: translateX(0) !important;
+    width: 100% !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+  }
+  .sidebar-open {
+    left: 0 !important;
+  }
+  .main-content,
+  .admin-main-content {
+    margin-left: 0 !important;
+    padding-top: 20px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+}
+/* =========================================
+   FINAL ABSOLUTE FIX: NOTIFICATION BELL - TOP RIGHT
+   ========================================= */
+
+/* 1. Bell Container - Always Top Right, Scrolls with Page */
+.notification-wrapper {
+  position: relative !important;  /* Scrolls with page */
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: 5000 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 2. Bell Button - Premium Look */
+.bell-btn {
+  width: 45px !important;
+  height: 45px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(90deg, #ff8c00, #a020f0) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-size: 1.2rem !important;
+  color: white !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4) !important;
+  position: relative !important;
+}
+
+/* 3. Badge Count */
+.badge-count {
+  position: absolute !important;
+  top: -5px !important;
+  right: -5px !important;
+  background: #ff4444 !important;
+  color: white !important;
+  font-size: 0.7rem !important;
+  padding: 3px 7px !important;
+  border-radius: 50% !important;
+  font-weight: bold !important;
+  border: 2px solid #0f0c29 !important;
+}
+
+/* 4. Notification Panel - FULLY VISIBLE, NO CUTS! */
+.notification-panel {
+  position: absolute !important;
+  top: 55px !important;
+  right: 0 !important;  /* Aligns to the right side */
+  left: auto !important;
+  width: 380px !important;
+  max-width: calc(100vw - 20px) !important;  /* Never exceed screen width */
+  max-height: 70vh !important;
+  background: rgba(15, 12, 41, 0.98) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+}
+
+/* 5. Mobile View - Full Width Panel (No Cuts!) */
+@media (max-width: 768px) {
+  .notification-panel {
+    width: calc(100vw - 20px) !important;  /* Full width minus 10px each side */
+    top: 50px !important;
+    right: 0 !important;  /* Aligned to right edge */
+    left: auto !important;
+  }
+}
+
+/* 6. Desktop Check - Ensure Panel Stays Right */
+@media (min-width: 769px) {
+  .notification-panel {
+    right: 0 !important;
+    left: auto !important;
+    width: 380px !important;
+  }
+}
+/* =========================================
+   FINAL DESKTOP FIX: BELL TOP RIGHT + FULL PANEL
+   ========================================= */
+@media (min-width: 769px) {
+  /* Ensure the main containers allow the panel to overflow gracefully */
+  .main-content,
+  .admin-main-content {
+    overflow: visible !important;
+  }
+
+  /* Top bar header pushes bell to the right */
+  .top-bar-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    overflow: visible !important;
+  }
+
+  /* Bell Wrapper - Push to far right */
+  .notification-wrapper {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    overflow: visible !important;
+  }
+
+  /* Notification Panel - Fully open, no cut-off, right aligned */
+  .notification-panel {
+    position: absolute !important;
+    top: 55px !important;
+    right: 0 !important;
+    left: auto !important;
+    width: 380px !important;
+    max-width: calc(100vw - 280px) !important; /* Keep within viewport, accounting for sidebar */
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: rgba(15, 12, 41, 0.98) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+/* =========================================
+   FINAL FIX: FORCE USER LOGOUT BUTTON TO SHOW
+   ========================================= */
+
+/* DESKTOP USER SIDEBAR */
+@media (min-width: 769px) {
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 250px !important;
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    z-index: 1000 !important;
+    overflow-y: auto !important;
+  }
+
+  .sidebar-nav {
+    flex: 1 !important;
+  }
+
+  .sidebar-footer {
+    margin-top: auto !important;
+    padding: 20px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .logout-btn-sidebar {
+    display: block !important;
+    width: 100% !important;
+    background: rgba(255, 0, 0, 0.2) !important;
+    border: 1px solid #ff4444 !important;
+    color: white !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    cursor: pointer !important;
+  }
+}
+
+/* MOBILE USER SIDEBAR */
+@media (max-width: 768px) {
+  .sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+  }
+
+  .sidebar-nav {
+    flex: 1 !important;
+  }
+
+  .sidebar-footer {
+    margin-top: auto !important;
+    padding: 20px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .logout-btn-sidebar {
+    display: block !important;
+    width: 100% !important;
+    background: rgba(255, 0, 0, 0.2) !important;
+    border: 1px solid #ff4444 !important;
+    color: white !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    cursor: pointer !important;
+  }
+}

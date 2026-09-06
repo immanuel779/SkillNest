@@ -1,0 +1,21 @@
+{
+  "name": "SkillNest",
+  "short_name": "SkillNest",
+  "description": "Community skills exchange and volunteer platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0c29",
+  "theme_color": "#a020f0",
+  "icons": [
+    {
+      "src": "/skillnest-icon.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/skillnest-icon 2.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
