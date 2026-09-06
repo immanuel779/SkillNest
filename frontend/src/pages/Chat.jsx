@@ -34,7 +34,7 @@ const Chat = () => {
     const connectSocket = async () => {
       try {
         const token = await currentUser.getIdToken();
-        newSocket = io("http://localhost:5000", { auth: { token } });
+        newSocket = io("https://skillnest-88fd.onrender.com", { auth: { token } });
         setSocket(newSocket);
 
         newSocket.on("connect", () => newSocket.emit("join_chat", chatId));

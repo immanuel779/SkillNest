@@ -33,12 +33,13 @@ const AppLayout = ({ children }) => {
     };
   }, [isSidebarOpen]);
 
-  const userLinks = [
+   const userLinks = [
     { to: "/dashboard", icon: <FaHome />, label: "Dashboard" },
     { to: "/browse", icon: <FaBriefcase />, label: "Browse Needs" },
     { to: "/post-need", icon: <FaPlusCircle />, label: "Post Need" },
     { to: "/my-jobs", icon: <FaFolderOpen />, label: "My Jobs" },
     { to: "/messages", icon: <FaComments />, label: "Messages" },
+    { to: "/resume-builder", icon: <FaFileAlt />, label: "Resume Builder" },
     { to: "/profile", icon: <FaUserCog />, label: "Profile" }
   ];
   if (isAdmin) userLinks.push({ to: "/admin", icon: <FaShieldAlt />, label: "Admin Panel" });

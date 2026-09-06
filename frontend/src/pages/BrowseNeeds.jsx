@@ -18,7 +18,7 @@ const BrowseNeeds = () => {
   const skills = ["all", "Frontend Developer", "Backend Developer", "UI/UX Designer", "Graphic Designer", "Data Analyst", "Content Writer", "Digital Marketer", "Video Editor", "Tutor", "Project Manager", "3D Designer", "Mobile App Developer"];
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/needs")
+    fetch("https://skillnest-88fd.onrender.com/api/needs")
       .then(res => res.json())
       .then(data => { setNeeds(data); setLoading(false); })
       .catch(err => { setError(err.message); setLoading(false); });

@@ -25,7 +25,7 @@ const ApplyNow = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/needs`);
+        const res = await fetch(`https://skillnest-88fd.onrender.com/api/needs`);
         const data = await res.json();
         setNeed(data.find(n => n.id === needId));
 
@@ -72,7 +72,7 @@ const ApplyNow = () => {
 
     try {
       const token = await auth.currentUser.getIdToken(true);
-      const response = await fetch(`http://localhost:5000/api/needs/${needId}/apply`, {
+      const response = await fetch(`https://skillnest-88fd.onrender.com/api/needs/${needId}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ ...formData, resumeUrl: formData.portfolio })

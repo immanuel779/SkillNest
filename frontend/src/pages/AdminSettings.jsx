@@ -65,7 +65,7 @@ const AdminSettings = () => {
       }, { merge: true });
 
       const token = await auth.currentUser.getIdToken(true);
-      await axios.put("http://localhost:5000/api/settings", { platform, notifications: notifPrefs }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put("https://skillnest-88fd.onrender.com/api/settings", { platform, notifications: notifPrefs }, { headers: { Authorization: `Bearer ${token}` } });
 
       setMessage("✅ Settings saved successfully!");
       setTimeout(() => setMessage(null), 3000);
