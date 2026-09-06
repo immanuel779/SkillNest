@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -20,7 +21,16 @@ export default defineConfig({
           { src: 'skillnest-icon.jpeg', sizes: '192x192', type: 'image/jpeg' },
           { src: 'skillnest-icon.jpeg', sizes: '512x512', type: 'image/jpeg' }
         ]
+      },
+      workbox: {
+        // ✅ KEY FIX: Allow files up to 5MB to be precached
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+        globPatterns: ['**/*.{js,css,html,png,svg,ico}']
       }
     })
-  ]
-});
+  ],
+  build: {
+    // ✅ Silence the chunk size warning (Vercel won't fail on this)
+    chunkSizeWarningLimit: 3000
+  }
+})
