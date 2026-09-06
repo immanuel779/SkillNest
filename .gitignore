@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets (DO NOT UPLOAD!)
+.env
+backend/.env
+backend/serviceAccountKey.json
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# Uploaded files
+backend/uploads/
+
+# Logs
+*.log
