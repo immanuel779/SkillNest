@@ -1,4 +1,4 @@
-const { sendEmail, sendPush, sendNotification } = require('./utils/email'); // Make sure this file exists!
+const { sendEmail, sendPush, sendNotification } = require('./utils/email');
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -12,7 +12,24 @@ const path = require('path');
 const fs = require('fs');
 
 dotenv.config();
-const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+// =========================================
+// ✅ FIXED: Read Firebase Config for Render
+// =========================================
+let serviceAccount;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } else {
+    // Local development fallback
+    serviceAccount = require('./serviceAccountKey.json');
+  }
+} catch (error) {
+  console.error("Fatal Error: Firebase service account could not be loaded.");
+  console.error(error);
+  process.exit(1); // Stop the server if no Firebase config
+}
+
 const adminApp = initializeApp({ credential: cert(serviceAccount) });
 
 // Modular SDK instances
@@ -20,11 +37,28 @@ const db = getFirestore(adminApp);
 const auth = getAuth(adminApp);
 
 const app = express();
-app.use(cors());
+
+// =========================================
+// ✅ UPDATED CORS (Allow Vercel Frontend + Local)
+// =========================================
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://skillnest.vercel.app", // Replace with your actual Vercel URL
+  "https://skillnest-backend.onrender.com"
+];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
 
 // =========================================
-// FILE UPLOAD SETUP (Supports Images & PDFs)
+// FILE UPLOAD SETUP
 // =========================================
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
@@ -36,11 +70,14 @@ const upload = multer({ storage });
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] }
+  cors: {
+    origin: allowedOrigins, // Use the array of allowed origins
+    methods: ["GET", "POST"]
+  }
 });
 
 // =========================================
-// SAFETY NET: Ensure functions exist to prevent crashes
+// SAFETY NET
 // =========================================
 const safeSendPush = (userId, title, body) => {
   if (typeof sendPush === 'function') return sendPush(userId, title, body);
@@ -52,20 +89,13 @@ const safeSendEmail = (to, subject, text) => {
   return Promise.resolve();
 };
 
-// =========================================
-// HELPER FUNCTION: Notification + Push + Email
-// =========================================
 async function createNotification(recipientId, title, message, type, emailAddress = null) {
     try {
         await db.collection('notifications').add({
             recipientId, title, message, type, read: false, createdAt: FieldValue.serverTimestamp()
         });
-        await safeSendPush(recipientId, title, message); 
-        
-        // If email address is provided, send email too
-        if (emailAddress) {
-            await safeSendEmail(emailAddress, title, message);
-        }
+        await safeSendPush(recipientId, title, message);
+        if (emailAddress) await safeSendEmail(emailAddress, title, message);
     } catch (error) { console.error("Notif error:", error); }
 }
 
@@ -80,15 +110,19 @@ app.use('/api/settings', settingsRoutes);
 
 app.get('/', (req, res) => res.send('SkillNest API is running!'));
 
-// File Upload Endpoint (Works for Images & PDFs)
+// File Upload Endpoint (✅ Dynamic URL for Render!)
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+  
+  // Dynamically builds the URL (works on localhost AND Render)
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+  
   res.status(200).json({ url: fileUrl });
 });
 
 // =========================================
-// SOCKET.IO CONNECTION (Real-time Chat)
+// SOCKET.IO CONNECTION
 // =========================================
 io.use(async (socket, next) => {
   try { 
@@ -105,7 +139,6 @@ io.on('connection', (socket) => {
   socket.on('typing', (chatId) => socket.to(chatId).emit('typing'));
   socket.on('stop_typing', (chatId) => socket.to(chatId).emit('stop_typing'));
 
-  // Mark messages as READ (WhatsApp style)
   socket.on('mark_messages_read', async (chatId) => {
     try {
       const chatDoc = await db.collection('chats').doc(chatId).get();
@@ -116,23 +149,19 @@ io.on('connection', (socket) => {
     } catch (error) { console.error("Mark read error:", error); }
   });
 
-  // Send message (Save to Firestore + Broadcast + Notify)
   socket.on('send_message', async (data) => {
     const { chatId, message } = data;
 
-    // 🔒 BACKEND ENFORCEMENT: Block chats if admin disabled it
+    // Backend enforcement
     try {
       const settingsDoc = await db.collection('settings').doc('platform').get();
       if (settingsDoc.exists && settingsDoc.data().allowChats === false) {
         socket.emit('chats_disabled', { message: 'Chatting is currently disabled by the admin.' });
         return;
       }
-    } catch (e) {
-      console.error("Error checking chat settings:", e);
-    }
+    } catch (e) { console.error("Error checking chat settings:", e); }
 
     try {
-      // Save full message object (text, type, fileUrl, etc.)
       const messageRef = await db.collection('chats').doc(chatId).collection('messages').add({
         ...message, 
         sender: socket.user.uid, 
@@ -140,16 +169,13 @@ io.on('connection', (socket) => {
         createdAt: FieldValue.serverTimestamp()
       });
 
-      // Update chat's last message
       await db.collection('chats').doc(chatId).update({
         lastMessage: message.text || 'File sent', 
         updatedAt: FieldValue.serverTimestamp()
       });
 
-      // Broadcast to everyone in the room
       io.to(chatId).emit('receive_message', { id: messageRef.id, ...message, sender: socket.user.uid, read: false });
 
-      // Notify the other participant (with their real name)
       const chatDoc = await db.collection('chats').doc(chatId).get();
       if (chatDoc.exists) {
         const recipientId = chatDoc.data().participants.find(p => p !== socket.user.uid);
@@ -158,10 +184,8 @@ io.on('connection', (socket) => {
           const senderDoc = await db.collection('users').doc(socket.user.uid).get();
           if (senderDoc.exists) senderName = senderDoc.data().name || 'User';
           
-          // Create notification (In-app + Push)
           await createNotification(recipientId, 'New Message 💬', `You have a new message from ${senderName}`, 'message');
           
-          // Also send email if recipient has one
           const recipientDoc = await db.collection('users').doc(recipientId).get();
           if (recipientDoc.exists && recipientDoc.data().email) {
             await safeSendEmail(recipientDoc.data().email, 'New Message 💬', `You have a new message from ${senderName} on SkillNest.`);
@@ -175,7 +199,7 @@ io.on('connection', (socket) => {
 });
 
 // =========================================
-// APP START (Send Update Notification to all users)
+// APP START
 // =========================================
 (async () => {
     try {
