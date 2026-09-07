@@ -28,12 +28,17 @@ const PostNeed = () => {
     if (!file) return "";
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // Renamed to imageFormData to avoid shadowing the main formData state
+      const imageFormData = new FormData();
+      imageFormData.append("file", file);
       const token = await auth.currentUser.getIdToken(true);
+      
       const response = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
-        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData
+        method: "POST", 
+        headers: { Authorization: `Bearer ${token}` }, 
+        body: imageFormData
       });
+      
       if (!response.ok) throw new Error("Upload failed");
       const data = await response.json();
       setUploadingImage(false);
@@ -63,6 +68,7 @@ const PostNeed = () => {
 
     try {
       const imageUrl = await uploadBrandImage();
+      // If upload failed and returned null, stop submission
       if (imageUrl === null) { setLoading(false); return; }
 
       const token = await auth.currentUser.getIdToken(true);
@@ -71,15 +77,23 @@ const PostNeed = () => {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ ...formData, imageUrl })
       });
-      const data = await response.json();
+      
+      // Parse JSON safely (handles empty body if server errors)
+      let data = {};
+      try { data = await response.json(); } catch (e) { /* ignore parse errors */ }
 
-      // ✅ FIXED: Don't log out on 401! Just tell them to wait and click again.
+      // LOG THE EXACT ERROR TO THE BROWSER CONSOLE! (Check the Network Tab)
+      console.log("Backend Status:", response.status);
+      console.log("Backend Data:", data);
+
       if (response.status === 401) {
-        setError("Backend is starting up. Please wait 5 seconds and click 'Post Need' again.");
-        setLoading(false);
-        return;
+        // A 401 means the token is invalid or rejected by the backend Firebase Admin.
+        setError(`Authentication failed: ${data.error || "Your session has expired. Please log out and log back in."}`);
       } else if (response.status === 403) {
         setError(data.error || "You do not have permission to post.");
+      } else if (response.status === 502 || response.status === 503) {
+        // This is the actual "Backend is starting up" or crashed status
+        setError("Backend is currently starting up. Please wait a few seconds and try again.");
       } else if (!response.ok) {
         setError(data.error || "Error posting need.");
       } else {
@@ -87,7 +101,7 @@ const PostNeed = () => {
         setTimeout(() => navigate("/browse"), 1500);
       }
     } catch (err) {
-      setError("Backend is not running! Open your backend terminal.");
+      setError(`Network error: ${err.message}. Ensure the backend is running and CORS is configured correctly.`);
     } finally {
       setLoading(false);
     }
