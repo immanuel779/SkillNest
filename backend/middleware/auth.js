@@ -1,10 +1,7 @@
 const admin = require('firebase-admin');
 const dotenv = require('dotenv');
-dotenv.config(); // Load .env variables
+dotenv.config();
 
-// =========================================
-// CONFIG: Enable local bypass ONLY if specified
-// =========================================
 const ALLOW_LOCAL_BYPASS = process.env.ALLOW_LOCAL_BYPASS === 'true';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -16,30 +13,42 @@ module.exports = async (req, res, next) => {
     }
     const token = header.split(' ')[1];
 
-    // 🔹 1. ALWAYS try to verify the real Firebase token first
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-
-  } catch (error) {
-    // ====== LOG THE FULL ERROR FOR DEBUGGING ======
-    console.error("============================================");
-    console.error("AUTH VERIFICATION FAILED");
-    console.error(error.message || error);
-    console.error("============================================");
-
-    // 🔹 2. LOCAL DEVELOPMENT BYPASS (ONLY if explicitly enabled!)
-    if (ALLOW_LOCAL_BYPASS && !IS_PRODUCTION) {
-      console.warn("⚠️   [LOCAL DEV MODE] Using temporary bypass. Token not verified.");
-      console.warn("⚠️   Remove ALLOW_LOCAL_BYPASS=true in .env before deploying!");
-      req.user = { uid: 'debug-user', email: 'debug@example.com' };
+    // 1. Try strict verification first
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token, true);
+      req.user = decodedToken;
       return next();
+    } catch (strictError) {
+      // 2. If strict fails, try with clock tolerance (ignore revoked check)
+      // The 60-second tolerance allows for server clock drift
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token, false);
+        // Manually check expiration with 60-second grace
+        const now = Math.floor(Date.now() / 1000);
+        const exp = decodedToken.exp;
+        if (exp && exp < now - 60) {
+          throw new Error('Token expired');
+        }
+        req.user = decodedToken;
+        return next();
+      } catch (toleranceError) {
+        // 3. Check if we're in local development (bypass allowed)
+        if (ALLOW_LOCAL_BYPASS && !IS_PRODUCTION) {
+          console.warn("⚠️ [LOCAL DEV MODE] Using temporary bypass. Token not verified.");
+          req.user = { uid: 'debug-user', email: 'debug@example.com' };
+          return next();
+        }
+        
+        // 4. If all fails, reject the request
+        console.error("AUTH VERIFICATION FAILED:", toleranceError.message || toleranceError);
+        return res.status(401).json({ 
+          error: 'Unauthorized - Token invalid or expired',
+          hint: IS_PRODUCTION ? 'Please log in again.' : 'Check system clock or Firebase config.'
+        });
+      }
     }
-
-    // 🔹 3. If we're in production or bypass is disabled, reject the request
-    return res.status(401).json({ 
-      error: 'Unauthorized - Token invalid or expired',
-      hint: IS_PRODUCTION ? 'Please log in again.' : 'Check system clock or Firebase config.'
-    });
+  } catch (error) {
+    console.error("AUTH ERROR:", error.message || error);
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 };

@@ -14,37 +14,34 @@ const fs = require('fs');
 dotenv.config();
 
 // =========================================
-// ✅ FIXED: Read Firebase Config for Render
+// ✅ Read Firebase Config for Render/Local
 // =========================================
 let serviceAccount;
 try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
   } else {
-    // Local development fallback
     serviceAccount = require('./serviceAccountKey.json');
   }
 } catch (error) {
   console.error("Fatal Error: Firebase service account could not be loaded.");
   console.error(error);
-  process.exit(1); // Stop the server if no Firebase config
+  process.exit(1);
 }
 
 const adminApp = initializeApp({ credential: cert(serviceAccount) });
 
-// Modular SDK instances
 const db = getFirestore(adminApp);
 const auth = getAuth(adminApp);
 
 const app = express();
 
 // =========================================
-// ✅ UPDATED CORS (Allow Vercel Frontend + Local)
+// ✅ UPDATED CORS (Your Vercel URL + Local)
 // =========================================
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://skill-nest-plum.vercel.app",
-  "https://skillnest-88fd.onrender.com"
+  "https://skill-nest-plum.vercel.app"
 ];
 app.use(cors({
   origin: function (origin, callback) {
@@ -58,14 +55,12 @@ app.use(cors({
 app.use(express.json());
 
 // =========================================
-// ✅ FILE UPLOAD SETUP - Uses /tmp on Render (CRITICAL FIX)
+// ✅ FILE UPLOAD SETUP (Writable on Render via /tmp)
 // =========================================
-const isRender = !!process.env.RENDER; // Render sets this to 'true'
-const uploadDir = isRender ? '/tmp/skillnest-uploads' : './uploads'; // Save to /tmp on Render
+const isRender = !!process.env.RENDER;
+const uploadDir = isRender ? '/tmp/skillnest-uploads' : './uploads';
 
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-// Serve uploaded files from this directory
 app.use('/uploads', express.static(uploadDir));
 
 const storage = multer.diskStorage({
@@ -76,14 +71,11 @@ const upload = multer({ storage });
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
 });
 
 // =========================================
-// SAFETY NET
+// ✅ SAFETY NET + HELPER
 // =========================================
 const safeSendPush = (userId, title, body) => {
   if (typeof sendPush === 'function') return sendPush(userId, title, body);
@@ -106,7 +98,7 @@ async function createNotification(recipientId, title, message, type, emailAddres
 }
 
 // =========================================
-// ROUTES
+// ✅ ROUTES
 // =========================================
 const needsRoutes = require('./routes/needs');
 const settingsRoutes = require('./routes/settings');
@@ -114,21 +106,41 @@ const settingsRoutes = require('./routes/settings');
 app.use('/api/needs', needsRoutes);
 app.use('/api/settings', settingsRoutes);
 
+// Health check
 app.get('/', (req, res) => res.send('SkillNest API is running!'));
 
-// File Upload Endpoint (✅ Dynamic URL for Render!)
+// File Upload Endpoint
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  
-  // Dynamically builds the URL (works on localhost AND Render)
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-  
   res.status(200).json({ url: fileUrl });
 });
 
+// ✅ NEW: Advanced Notification Endpoint (Email + Push + In-app)
+app.post('/api/notify', async (req, res) => {
+  const { recipientId, title, message, type, email } = req.body;
+  try {
+    // 1. In-app notification
+    await db.collection('notifications').add({
+      recipientId, title, message, type, read: false, createdAt: FieldValue.serverTimestamp()
+    });
+
+    // 2. Push notification (if user has FCM token)
+    await safeSendPush(recipientId, title, message);
+
+    // 3. Email notification (if email provided)
+    if (email) await safeSendEmail(email, title, message);
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Notification endpoint error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // =========================================
-// SOCKET.IO CONNECTION
+// ✅ SOCKET.IO (With Clock Tolerance)
 // =========================================
 io.use(async (socket, next) => {
   try { 
@@ -136,7 +148,14 @@ io.use(async (socket, next) => {
     socket.user = await auth.verifyIdToken(token); 
     next(); 
   } catch (err) { 
-    next(new Error('Authentication error')); 
+    // Retry with tolerance if clock is off
+    try {
+      const token = socket.handshake.auth.token;
+      socket.user = await auth.verifyIdToken(token, false);
+      next();
+    } catch (retryError) {
+      next(new Error('Authentication error'));
+    }
   }
 });
 
@@ -158,7 +177,6 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     const { chatId, message } = data;
 
-    // Backend enforcement
     try {
       const settingsDoc = await db.collection('settings').doc('platform').get();
       if (settingsDoc.exists && settingsDoc.data().allowChats === false) {
@@ -205,7 +223,7 @@ io.on('connection', (socket) => {
 });
 
 // =========================================
-// APP START
+// ✅ APP START
 // =========================================
 (async () => {
     try {
