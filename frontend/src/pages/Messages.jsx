@@ -32,15 +32,23 @@ const Messages = () => {
 
     const fetchChats = async () => {
       try {
-        // 1. Fetch ALL chats (no where query!)
+        // 🔍 DEBUG LINE: Check your UID in the console
+        console.log("My Current UID is:", user.uid);
+        console.log("My Current Email is:", user.email);
+
+        // 1. Fetch ALL chats
         const snapshot = await getDocs(collection(db, "chats"));
         const allChats = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         
-        // 2. Filter chats where the current user is a participant
+        // 2. Filter chats where the current user is a participant (BULLETPROOF: checks UID OR Email)
         const chatList = allChats.filter(chat => 
-          chat.participants.includes(user.uid) || 
-          chat.participants.includes(user.email)
+          (chat.participants && chat.participants.includes(user.uid)) || 
+          (chat.participants && chat.participants.includes(user.email))
         );
+
+        // 🔍 DEBUG LINE: See how many chats matched
+        console.log("Matched Chats Count:", chatList.length);
+        console.log("Matched Chats Data:", chatList);
 
         // 3. Fetch ALL users and build a map
         const usersSnapshot = await getDocs(collection(db, "users"));
@@ -55,7 +63,7 @@ const Messages = () => {
         const chatListWithNames = await Promise.all(
           chatList.map(async (chat) => {
             const otherUserId = chat.participants.find((id) => id !== user.uid && id !== user.email);
-            const otherUserData = usersMap[otherUserId] || null;
+            const otherUserData = usersMap[otherUserId] || usersMap[otherUserId] || null;
             
             const otherUserName = otherUserData?.name || otherUserData?.organizationName || "User";
             const otherUserAvatar = otherUserData?.avatarUrl || "";
