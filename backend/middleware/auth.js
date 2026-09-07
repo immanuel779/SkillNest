@@ -1,9 +1,4 @@
 const admin = require('firebase-admin');
-const dotenv = require('dotenv');
-dotenv.config();
-
-const ALLOW_LOCAL_BYPASS = process.env.ALLOW_LOCAL_BYPASS === 'true';
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 module.exports = async (req, res, next) => {
   try {
@@ -13,37 +8,14 @@ module.exports = async (req, res, next) => {
     }
     const token = header.split(' ')[1];
 
-    // 1. Strict check
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token, true);
-      req.user = decodedToken;
-      return next();
-    } catch (strictError) {
-      // 2. Retry with clock tolerance (60 seconds)
-      try {
-        const decodedToken = await admin.auth().verifyIdToken(token, false);
-        const now = Math.floor(Date.now() / 1000);
-        if (decodedToken.exp && decodedToken.exp < now - 60) {
-          throw new Error('Token expired');
-        }
-        req.user = decodedToken;
-        return next();
-      } catch (toleranceError) {
-        // 3. Local dev bypass only (never in production)
-        if (ALLOW_LOCAL_BYPASS && !IS_PRODUCTION) {
-          console.warn("⚠️ Using temporary bypass (LOCAL ONLY).");
-          req.user = { uid: 'debug-user', email: 'debug@example.com' };
-          return next();
-        }
-        console.error("AUTH VERIFICATION FAILED:", toleranceError.message);
-        return res.status(401).json({ 
-          error: 'Unauthorized - Token invalid or expired',
-          hint: IS_PRODUCTION ? 'Please log in again.' : 'Check system clock.'
-        });
-      }
-    }
+    // 1. Try strict (but no time check – we ignore clock drift)
+    const decodedToken = await admin.auth().verifyIdToken(token, false);
+    req.user = decodedToken;
+    next();
+    
   } catch (error) {
+    // 2. If it still fails, log the error for us to see
     console.error("AUTH ERROR:", error.message);
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Unauthorized - Token invalid' });
   }
 };
