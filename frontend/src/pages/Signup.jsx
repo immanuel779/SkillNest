@@ -4,6 +4,7 @@ import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useSettings } from "../context/SettingsContext";
+import { addNotification } from "../utils/notifications"; // ✅ Add import
 import { FaEye, FaEyeSlash, FaUser, FaLock, FaBuilding } from "react-icons/fa";
 
 const Signup = () => {
@@ -12,20 +13,19 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("employee");
-  const [organization, setOrganization] = useState(""); // Future Tool: Show if Employer
+  const [organization, setOrganization] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
-  const { settings } = useSettings(); // Get Global Settings
+  const { settings } = useSettings();
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError(null);
 
-    // ✅ Check Allow Signups
     if (!settings.platform.allowSignups) {
       setError("New signups are currently disabled. Please contact the admin team.");
       return;
@@ -44,16 +44,28 @@ const Signup = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: name,
         email: email,
         role: role,
-        organizationName: role === 'employer' ? organization : "", // Save org if employer
+        organizationName: role === 'employer' ? organization : "",
         agreedToTerms: true,
         createdAt: new Date()
       });
+
+      // ✅ SEND WELCOME NOTIFICATION (Safe try-catch)
+      try {
+        await addNotification(
+          user.uid,
+          "Welcome to SkillNest! 👋",
+          "Your account is ready. Complete your profile to get started!",
+          "welcome"
+        );
+      } catch (notifError) {
+        console.error("Notification failed but user created:", notifError);
+      }
 
       navigate("/dashboard");
     } catch (err) {
@@ -85,7 +97,6 @@ const Signup = () => {
             <input className="input-field" type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
-          {/* Future Tool: Organization Name only shows for Employers */}
           {role === 'employer' && (
             <div className="form-group">
               <div className="input-icon-wrapper">
