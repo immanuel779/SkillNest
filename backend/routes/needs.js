@@ -29,7 +29,6 @@ router.get('/', async (req, res) => {
 
 // POST a new need (requires auth)
 router.post('/', authMiddleware, async (req, res) => {
-  // 🔒 BACKEND ENFORCEMENT: Block postings if disabled
   if (!(await checkSetting('allowPostings'))) {
     return res.status(403).json({ error: 'Job postings are currently disabled by the admin.' });
   }
@@ -51,9 +50,10 @@ router.post('/', authMiddleware, async (req, res) => {
     };
     const docRef = await db.collection('needs').add(newNeed);
 
+    // ✅ FIXED: Properly wait for alerts to send (using for...of)
     try {
       const alertsSnapshot = await db.collection('alerts').get();
-      alertsSnapshot.forEach(async (alertDoc) => {
+      for (const alertDoc of alertsSnapshot.docs) {
         const alert = alertDoc.data();
         if (alert.skill && alert.skill.toLowerCase() === skillRequired.toLowerCase()) {
           await sendNotification(alert.userId, null, `🔥 New Job Alert: ${title}`, `A new job matching your saved alert for "${skillRequired}" has been posted!`, 'job');
@@ -62,16 +62,15 @@ router.post('/', authMiddleware, async (req, res) => {
             await sendJobAlertEmail(userDoc.data().email, title, organizationName);
           }
         }
-      });
+      }
     } catch (alertError) { console.error("Error sending alerts:", alertError); }
 
     res.status(201).json({ id: docRef.id, ...newNeed });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Apply to a need (requires auth)
+// Apply to a need (requires auth) - 🔥 CRITICAL FIX APPLIED HERE
 router.post('/:id/apply', authMiddleware, async (req, res) => {
-  // 🔒 BACKEND ENFORCEMENT: Block applications if disabled
   if (!(await checkSetting('allowApplications'))) {
     return res.status(403).json({ error: 'Applications are currently disabled by the admin.' });
   }
@@ -102,12 +101,59 @@ router.post('/:id/apply', authMiddleware, async (req, res) => {
       chatId = chatRef.id;
     }
 
-    const employerEmail = (await db.collection('users').doc(needData.createdBy).get()).data()?.email;
-    await sendNotification(needData.createdBy, employerEmail, 'New Application Received! 🎉', `${fullName} applied for "${needData.title}".`, 'application');
+    // 🔥 FIXED: Wrap notification/email in try/catch so it NEVER stops the response
+    try {
+      const employerEmail = (await db.collection('users').doc(needData.createdBy).get()).data()?.email;
+      await sendNotification(needData.createdBy, employerEmail, 'New Application Received! 🎉', `${fullName} applied for "${needData.title}".`, 'application');
+    } catch (notifError) {
+      console.error("Notification failed but chat created:", notifError);
+    }
 
+    // ✅ THIS MUST ALWAYS HAPPEN: Return the chatId so the frontend can direct the user!
     res.status(200).json({ message: 'Application submitted successfully', chatId });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// ... (Keep the DELETE, GET applications, and STATUS routes exactly as they are) ...
+// DELETE a need (Employer only)
+router.delete('/:id', authMiddleware, async (req, res) => {
+  const needId = req.params.id;
+  try {
+    const needDoc = await db.collection('needs').doc(needId).get();
+    if (!needDoc.exists) return res.status(404).json({ error: 'Job not found' });
+    if (needDoc.data().createdBy !== req.user.uid) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('needs').doc(needId).delete();
+    res.status(200).json({ message: 'Job deleted successfully' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// GET all applications for a job (Employer only)
+router.get('/:id/applications', authMiddleware, async (req, res) => {
+  const needId = req.params.id;
+  try {
+    const needDoc = await db.collection('needs').doc(needId).get();
+    if (!needDoc.exists) return res.status(404).json({ error: 'Job not found' });
+    if (needDoc.data().createdBy !== req.user.uid) return res.status(403).json({ error: 'Forbidden' });
+
+    const appsSnapshot = await db.collection('applications').where('needId', '==', needId).get();
+    res.status(200).json(appsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// UPDATE Application Status (Employer only)
+router.put('/applications/:appId/status', authMiddleware, async (req, res) => {
+  const appId = req.params.appId;
+  const { status } = req.body;
+  try {
+    const appDoc = await db.collection('applications').doc(appId).get();
+    if (!appDoc.exists) return res.status(404).json({ error: 'Application not found' });
+
+    const appData = appDoc.data();
+    const needDoc = await db.collection('needs').doc(appData.needId).get();
+    if (needDoc.data().createdBy !== req.user.uid) return res.status(403).json({ error: 'Forbidden' });
+
+    await db.collection('applications').doc(appId).update({ status });
+    res.status(200).json({ message: 'Status updated' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 module.exports = router;
