@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { db, auth } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const SettingsContext = createContext();
 export const useSettings = () => useContext(SettingsContext);
@@ -17,17 +19,21 @@ export const SettingsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ LIVE BACKEND URL (NO localhost!)
-  const BACKEND_URL = "https://skillnest-88fd.onrender.com";
+  // 🔥 FIXED: Removed Render URL, using Firestore directly instead!
+  const settingsRef = doc(db, "settings", "platform");
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/settings`);
-      const data = await res.json();
-      if (data && data.platform && data.notifications) {
-        setSettings(data);
+      // Reads directly from Firestore (Never sleeps, instant, free!)
+      const docSnap = await getDoc(settingsRef);
+      
+      if (docSnap.exists()) {
+        setSettings(docSnap.data());
+      } else {
+        // If no settings doc exists yet, keep the defaults
+        console.log("No settings document found, using defaults.");
       }
     } catch (err) {
       console.error("Error fetching settings:", err);
@@ -52,14 +58,13 @@ export const SettingsProvider = ({ children }) => {
 
   const saveSettings = useCallback(async (newSettings) => {
     try {
-      const token = await import("../firebase").then((m) => m.auth.currentUser.getIdToken());
-      const res = await fetch(`${BACKEND_URL}/api/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(newSettings),
-      });
+      // ✅ Security: Only an authenticated user can save settings
+      if (!auth.currentUser) {
+        throw new Error("You must be logged in to save settings.");
+      }
 
-      if (!res.ok) throw new Error("Failed to save settings");
+      // Saves directly to Firestore
+      await setDoc(settingsRef, newSettings, { merge: true });
 
       updateSettings(newSettings);
       return true;
@@ -69,11 +74,18 @@ export const SettingsProvider = ({ children }) => {
     }
   }, [updateSettings]);
 
-  const resetSettings = useCallback(() => {
-    setSettings({
+  const resetSettings = useCallback(async () => {
+    const defaultSettings = {
       platform: { maintenance: false, allowSignups: true, allowPostings: true, allowApplications: true, allowChats: true },
       notifications: { emailAlerts: true, pushAlerts: true, inAppAlerts: true, autoCleanup: false },
-    });
+    };
+    
+    setSettings(defaultSettings);
+    
+    // Also reset it in Firestore if logged in
+    if (auth.currentUser) {
+      await setDoc(settingsRef, defaultSettings, { merge: true });
+    }
   }, []);
 
   return (

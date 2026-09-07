@@ -33,7 +33,8 @@ const PostNeed = () => {
       imageFormData.append("file", file);
       const token = await auth.currentUser.getIdToken(true);
       
-      const response = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
+      // UPDATED: Changed to relative path for Vercel Serverless
+      const response = await fetch("/api/upload", {
         method: "POST", 
         headers: { Authorization: `Bearer ${token}` }, 
         body: imageFormData
@@ -72,7 +73,8 @@ const PostNeed = () => {
       if (imageUrl === null) { setLoading(false); return; }
 
       const token = await auth.currentUser.getIdToken(true);
-      const response = await fetch("https://skillnest-88fd.onrender.com/api/needs", {
+      // UPDATED: Changed to relative path for Vercel Serverless
+      const response = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ ...formData, imageUrl })
@@ -101,7 +103,8 @@ const PostNeed = () => {
         setTimeout(() => navigate("/browse"), 1500);
       }
     } catch (err) {
-      setError(`Network error: ${err.message}. Ensure the backend is running and CORS is configured correctly.`);
+      // UPDATED: Changed the error message since we no longer rely on Render or CORS
+      setError(`Network error: ${err.message}. Make sure your Vercel Serverless function is deployed.`);
     } finally {
       setLoading(false);
     }

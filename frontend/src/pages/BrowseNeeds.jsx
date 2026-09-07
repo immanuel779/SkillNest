@@ -62,16 +62,23 @@ const BrowseNeeds = () => {
   ];
 
   useEffect(() => {
-    // ✅ Fixed Render URL
-    fetch("https://skillnest-88fd.onrender.com/api/needs")
+    // ✅ UPDATED: Uses Vercel Serverless Function (No more Render/No more sleeping/No more CORS issues)
+    fetch("/api/needs")
       .then(res => res.json())
       .then(data => { setNeeds(data); setLoading(false); })
       .catch(err => { setError(err.message); setLoading(false); });
 
     const loadSaved = async () => {
-      const ref = doc(db, "users", auth.currentUser.uid);
-      const snap = await getDoc(ref);
-      if (snap.exists()) setSaved(snap.data().savedJobs || []);
+      // ✅ FIXED: Prevent crash if user is not logged in
+      if (!auth.currentUser) return;
+
+      try {
+        const ref = doc(db, "users", auth.currentUser.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) setSaved(snap.data().savedJobs || []);
+      } catch (err) {
+        console.error("Error loading saved jobs:", err);
+      }
     };
     loadSaved();
   }, []);
@@ -84,9 +91,16 @@ const BrowseNeeds = () => {
    .filter(n => skill === "all" || n.skillRequired === skill);
 
   const toggleSave = async (id) => {
+    if (!auth.currentUser) return; // Prevent crash if clicking save while logged out
+
     const next = saved.includes(id) ? saved.filter(x => x !== id) : [...saved, id];
     setSaved(next);
-    await setDoc(doc(db, "users", auth.currentUser.uid), { savedJobs: next }, { merge: true });
+    
+    try {
+      await setDoc(doc(db, "users", auth.currentUser.uid), { savedJobs: next }, { merge: true });
+    } catch (err) {
+      console.error("Error saving job:", err);
+    }
   };
 
   const shareJob = (platform, job) => {
