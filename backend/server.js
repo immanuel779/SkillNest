@@ -43,8 +43,7 @@ const app = express();
 // =========================================
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://skillnest.vercel.app", // Replace with your actual Vercel URL
-  "https://skillnest-backend.onrender.com"
+  "https://skill-nest-plum.vercel.app" // ✅ YOUR REAL VERCEL URL
 ];
 app.use(cors({
   origin: function (origin, callback) {
@@ -58,12 +57,18 @@ app.use(cors({
 app.use(express.json());
 
 // =========================================
-// FILE UPLOAD SETUP
+// ✅ FILE UPLOAD SETUP - Uses /tmp on Render (CRITICAL FIX)
 // =========================================
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+const isRender = !!process.env.RENDER; // Render sets this to 'true'
+const uploadDir = isRender ? '/tmp/skillnest-uploads' : './uploads'; // Save to /tmp on Render
+
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+// Serve uploaded files from this directory
+app.use('/uploads', express.static(uploadDir));
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads'),
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
@@ -71,7 +76,7 @@ const upload = multer({ storage });
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins, // Use the array of allowed origins
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
