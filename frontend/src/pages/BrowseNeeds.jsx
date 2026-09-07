@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { FaLinkedinIn, FaTwitter, FaFacebookF, FaCheckCircle } from "react-icons/fa";
-import AppLayout from "../components/AppLayout"; // ✅ Import AppLayout
+import AppLayout from "../components/AppLayout";
 
 const BrowseNeeds = () => {
   const [needs, setNeeds] = useState([]);
@@ -14,10 +14,55 @@ const BrowseNeeds = () => {
   const [skill, setSkill] = useState("all");
   const [saved, setSaved] = useState([]);
 
-  const locations = ["all", "Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Enugu", "Remote", "Other"];
-  const skills = ["all", "Frontend Developer", "Backend Developer", "UI/UX Designer", "Graphic Designer", "Data Analyst", "Content Writer", "Digital Marketer", "Video Editor", "Tutor", "Project Manager", "3D Designer", "Mobile App Developer"];
+  const locations = ["all", "Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Enugu", "Kaduna", "Ogun", "Remote", "Other"];
+  
+  // ✅ EXPANDED SKILLS LIST (100+ Tech, Vocational, Career, Healthcare, etc.)
+  const skills = [
+    "all", // Keep at top for filter
+    // Tech & Digital
+    "Frontend Developer", "Backend Developer", "Full Stack Developer", "Mobile App Developer",
+    "UI/UX Designer", "Graphic Designer", "Product Designer", "Data Analyst", "Data Scientist",
+    "Machine Learning Engineer", "DevOps Engineer", "Cloud Engineer", "Cybersecurity Specialist",
+    "IT Support Specialist", "Software Tester",
+    // Vocational & Trades
+    "Electrician", "Plumber", "Welder", "Carpenter", "Mason", "Painter", "Auto Mechanic",
+    "HVAC Technician", "Solar Panel Installer", "Generator Repairer", "Tailor", "Fashion Designer",
+    "Hair Stylist", "Barber", "Makeup Artist", "Shoemaker", "Upholsterer", "Glass Fitter", "Tiler",
+    // Creative & Media
+    "Content Writer", "Copywriter", "Technical Writer", "Blogger", "Editor", "Proofreader",
+    "Video Editor", "Photographer", "Animator", "3D Designer", "Illustrator", "Voice Over Artist",
+    "Music Producer", "DJ", "Actor", "Model", "Social Media Manager", "SEO Specialist",
+    "Email Marketer", "Brand Strategist",
+    // Business & Management
+    "Project Manager", "Product Manager", "Business Analyst", "Accountant", "Financial Analyst",
+    "Auditor", "Lawyer", "HR Specialist", "Recruiter", "Sales Representative", "Customer Support",
+    "Community Manager", "Event Planner", "Virtual Assistant", "Admin Assistant", "Data Entry Clerk",
+    "Logistic Coordinator", "Supply Chain Manager",
+    // Education & Training
+    "Tutor", "Teacher", "Curriculum Developer", "Translator", "Language Instructor",
+    "Academic Coach", "Exam Preparer", "Online Course Creator", "Podcast Host",
+    // Healthcare & Wellness
+    "Nurse", "Caregiver", "Pharmacist", "Doctor", "Dentist", "Physiotherapist", "Psychologist",
+    "Nutritionist", "Fitness Trainer", "Yoga Instructor", "Massage Therapist", "Counselor",
+    // Hospitality & Service
+    "Chef", "Cook", "Waiter", "Bartender", "Hotel Manager", "Housekeeper", "Tour Guide",
+    "Flight Attendant", "Barista", "Caterer",
+    // Construction & Engineering
+    "Civil Engineer", "Structural Engineer", "Architect", "Surveyor", "Site Supervisor",
+    "Heavy Equipment Operator", "Crane Operator", "Scaffolder",
+    // Transportation & Logistics
+    "Driver", "Delivery Rider", "Truck Driver", "Pilot", "Ship Captain", "Warehouse Manager",
+    "Customs Officer",
+    // Agriculture & Environment
+    "Farmer", "Agronomist", "Fisherman", "Gardener", "Landscaper", "Animal Caretaker",
+    "Environmental Scientist",
+    // Other Career Skills
+    "Security Guard", "Cleaner", "Laundry Attendant", "Janitor", "Decorator",
+    "Call Center Agent", "Telemarketer"
+  ];
 
   useEffect(() => {
+    // ✅ Fixed Render URL
     fetch("https://skillnest-88fd.onrender.com/api/needs")
       .then(res => res.json())
       .then(data => { setNeeds(data); setLoading(false); })
@@ -56,7 +101,7 @@ const BrowseNeeds = () => {
   if (loading) return <div className="dashboard-loader"><div className="loader-spinner"></div><p>Loading jobs...</p></div>;
 
   return (
-    <AppLayout> {/* ✅ Wrap everything in AppLayout */}
+    <AppLayout>
       <div className="browse-container">
         <div className="browse-header">
           <h1>Browse Opportunities</h1>

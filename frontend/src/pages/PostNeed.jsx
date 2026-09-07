@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { useSettings } from "../context/SettingsContext";
 import { FaUpload, FaWhatsapp, FaPhone } from "react-icons/fa";
-import AppLayout from "../components/AppLayout"; // ✅ Import AppLayout
+import AppLayout from "../components/AppLayout";
 
 const PostNeed = () => {
   const navigate = useNavigate();
@@ -18,7 +18,50 @@ const PostNeed = () => {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
-  const skills = ["Frontend Developer", "Backend Developer", "Full Stack Developer", "UI/UX Designer", "Graphic Designer", "Data Analyst", "Content Writer", "Digital Marketer", "Video Editor", "Tutor", "Project Manager", "3D Designer", "Mobile App Developer", "Cybersecurity Specialist", "Virtual Assistant"];
+  // ✅ EXPANDED SKILLS LIST (Tech + Vocational + Career)
+  const skills = [
+    // Tech & Digital
+    "Frontend Developer", "Backend Developer", "Full Stack Developer", "Mobile App Developer", 
+    "UI/UX Designer", "Graphic Designer", "Product Designer", "Data Analyst", "Data Scientist", 
+    "Machine Learning Engineer", "DevOps Engineer", "Cloud Engineer", "Cybersecurity Specialist", 
+    "IT Support Specialist", "Software Tester",
+    // Vocational & Trades
+    "Electrician", "Plumber", "Welder", "Carpenter", "Mason", "Painter", "Auto Mechanic", 
+    "HVAC Technician", "Solar Panel Installer", "Generator Repairer", "Tailor", "Fashion Designer", 
+    "Hair Stylist", "Barber", "Makeup Artist", "Shoemaker", "Upholsterer", "Glass Fitter", "Tiler",
+    // Creative & Media
+    "Content Writer", "Copywriter", "Technical Writer", "Blogger", "Editor", "Proofreader", 
+    "Video Editor", "Photographer", "Animator", "3D Designer", "Illustrator", "Voice Over Artist", 
+    "Music Producer", "DJ", "Actor", "Model", "Social Media Manager", "SEO Specialist", 
+    "Email Marketer", "Brand Strategist",
+    // Business & Management
+    "Project Manager", "Product Manager", "Business Analyst", "Accountant", "Financial Analyst", 
+    "Auditor", "Lawyer", "HR Specialist", "Recruiter", "Sales Representative", "Customer Support", 
+    "Community Manager", "Event Planner", "Virtual Assistant", "Admin Assistant", "Data Entry Clerk", 
+    "Logistic Coordinator", "Supply Chain Manager",
+    // Education & Training
+    "Tutor", "Teacher", "Curriculum Developer", "Translator", "Language Instructor", 
+    "Academic Coach", "Exam Preparer", "Online Course Creator", "Podcast Host",
+    // Healthcare & Wellness
+    "Nurse", "Caregiver", "Pharmacist", "Doctor", "Dentist", "Physiotherapist", "Psychologist", 
+    "Nutritionist", "Fitness Trainer", "Yoga Instructor", "Massage Therapist", "Counselor",
+    // Hospitality & Service
+    "Chef", "Cook", "Waiter", "Bartender", "Hotel Manager", "Housekeeper", "Tour Guide", 
+    "Flight Attendant", "Barista", "Caterer",
+    // Construction & Engineering
+    "Civil Engineer", "Structural Engineer", "Architect", "Surveyor", "Site Supervisor", 
+    "Heavy Equipment Operator", "Crane Operator", "Scaffolder",
+    // Transportation & Logistics
+    "Driver", "Delivery Rider", "Truck Driver", "Pilot", "Ship Captain", "Warehouse Manager", 
+    "Customs Officer",
+    // Agriculture & Environment
+    "Farmer", "Agronomist", "Fisherman", "Gardener", "Landscaper", "Animal Caretaker", 
+    "Environmental Scientist",
+    // Other
+    "Security Guard", "Cleaner", "Laundry Attendant", "Janitor", "Decorator", 
+    "Call Center Agent", "Telemarketer"
+  ];
+
   const locations = ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Enugu", "Kaduna", "Ogun", "Remote", "Other"];
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,6 +74,7 @@ const PostNeed = () => {
       const formData = new FormData();
       formData.append("file", file);
       const token = await auth.currentUser.getIdToken(true);
+      // ✅ Fixed to Render URL
       const response = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
         method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData
       });
@@ -66,7 +110,8 @@ const PostNeed = () => {
       if (imageUrl === null) { setLoading(false); return; }
 
       const token = await auth.currentUser.getIdToken(true);
-      const response = await fetch("http://localhost:5000/api/needs", {
+      // ✅ Fixed to Render URL
+      const response = await fetch("https://skillnest-88fd.onrender.com/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ ...formData, imageUrl })
@@ -91,7 +136,7 @@ const PostNeed = () => {
   };
 
   return (
-    <AppLayout> {/* ✅ Wrapped with AppLayout for Hamburger + Bell! */}
+    <AppLayout>
       <div className="form-page-wrapper">
         <div className="glass-card form-card">
           <h1 className="logo-text" style={{ fontSize: "2rem", marginBottom: "10px" }}>Post a Need</h1>
