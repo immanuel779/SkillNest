@@ -20,13 +20,16 @@ const AdminSettings = () => {
   const [personal, setPersonal] = useState({ name: "", email: "", organization: "", phone: "", location: "" });
   const [twoFA, setTwoFA] = useState(false);
 
+  // ✅ LIVE BACKEND URL
+  const BACKEND_URL = "https://skillnest-88fd.onrender.com";
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
       try {
         const [userDocRes, settingsRes] = await Promise.all([
           getDoc(doc(db, "users", auth.currentUser.uid)),
-          axios.get("http://localhost:5000/api/settings")
+          axios.get(`${BACKEND_URL}/api/settings`)
         ]);
 
         if (userDocRes.exists()) {
@@ -65,7 +68,7 @@ const AdminSettings = () => {
       }, { merge: true });
 
       const token = await auth.currentUser.getIdToken(true);
-      await axios.put("https://skillnest-88fd.onrender.com/api/settings", { platform, notifications: notifPrefs }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${BACKEND_URL}/api/settings`, { platform, notifications: notifPrefs }, { headers: { Authorization: `Bearer ${token}` } });
 
       setMessage("✅ Settings saved successfully!");
       setTimeout(() => setMessage(null), 3000);
