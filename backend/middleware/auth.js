@@ -13,17 +13,15 @@ module.exports = async (req, res, next) => {
     }
     const token = header.split(' ')[1];
 
-    // 1. Try strict verification first
+    // Strict check first
     try {
       const decodedToken = await admin.auth().verifyIdToken(token, true);
       req.user = decodedToken;
       return next();
     } catch (strictError) {
-      // 2. If strict fails, try with clock tolerance (ignore revoked check)
-      // The 60-second tolerance allows for server clock drift
+      // Retry with clock tolerance
       try {
         const decodedToken = await admin.auth().verifyIdToken(token, false);
-        // Manually check expiration with 60-second grace
         const now = Math.floor(Date.now() / 1000);
         const exp = decodedToken.exp;
         if (exp && exp < now - 60) {
@@ -32,23 +30,21 @@ module.exports = async (req, res, next) => {
         req.user = decodedToken;
         return next();
       } catch (toleranceError) {
-        // 3. Check if we're in local development (bypass allowed)
+        // Local bypass only
         if (ALLOW_LOCAL_BYPASS && !IS_PRODUCTION) {
-          console.warn("⚠️ [LOCAL DEV MODE] Using temporary bypass. Token not verified.");
+          console.warn("⚠️ Using temporary bypass.");
           req.user = { uid: 'debug-user', email: 'debug@example.com' };
           return next();
         }
-        
-        // 4. If all fails, reject the request
-        console.error("AUTH VERIFICATION FAILED:", toleranceError.message || toleranceError);
+        console.error("AUTH VERIFICATION FAILED:", toleranceError.message);
         return res.status(401).json({ 
           error: 'Unauthorized - Token invalid or expired',
-          hint: IS_PRODUCTION ? 'Please log in again.' : 'Check system clock or Firebase config.'
+          hint: IS_PRODUCTION ? 'Please log in again.' : 'Check system clock.'
         });
       }
     }
   } catch (error) {
-    console.error("AUTH ERROR:", error.message || error);
+    console.error("AUTH ERROR:", error.message);
     return res.status(401).json({ error: 'Unauthorized' });
   }
 };
