@@ -47,7 +47,7 @@ const PostNeed = () => {
     e.preventDefault();
     setLoading(true); setError(null); setMessage(null);
 
-    if (!settings.platform.allowPostings) {
+   if (!settings?.platform?.allowPostings) {
       setError("Job postings are currently disabled. Please contact the admin team.");
       setLoading(false);
       return;

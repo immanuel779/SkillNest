@@ -23,7 +23,7 @@ const Login = () => {
     setError(null);
 
     // ✅ Check Maintenance Mode
-    if (settings.platform.maintenance) {
+    if (settings?.platform?.maintenance) {
       setError("Platform is currently under maintenance. Please try again later.");
       setLoading(false);
       return;

@@ -5,39 +5,50 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 const SettingsContext = createContext();
 export const useSettings = () => useContext(SettingsContext);
 
+// Define defaults outside so we can merge them safely
+const DEFAULT_SETTINGS = {
+  platform: {
+    maintenance: false,
+    allowSignups: true,
+    allowPostings: true,
+    allowApplications: true,
+    allowChats: true,
+  },
+  notifications: { emailAlerts: true, pushAlerts: true, inAppAlerts: true, autoCleanup: false },
+};
+
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({
-    platform: {
-      maintenance: false,
-      allowSignups: true,
-      allowPostings: true,
-      allowApplications: true,
-      allowChats: true,
-    },
-    notifications: { emailAlerts: true, pushAlerts: true, inAppAlerts: true, autoCleanup: false },
-  });
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 🔥 FIXED: Removed Render URL, using Firestore directly instead!
+  // 🔥 FIXED: Using Firestore directly
   const settingsRef = doc(db, "settings", "platform");
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Reads directly from Firestore (Never sleeps, instant, free!)
       const docSnap = await getDoc(settingsRef);
       
       if (docSnap.exists()) {
-        setSettings(docSnap.data());
+        const fetchedData = docSnap.data();
+        // 🛡️ CRITICAL FIX: Always merge fetched data with defaults.
+        // This prevents "Cannot read properties of undefined" if the document is missing fields.
+        const mergedSettings = {
+          platform: { ...DEFAULT_SETTINGS.platform, ...(fetchedData.platform || {}) },
+          notifications: { ...DEFAULT_SETTINGS.notifications, ...(fetchedData.notifications || {}) },
+        };
+        setSettings(mergedSettings);
       } else {
-        // If no settings doc exists yet, keep the defaults
         console.log("No settings document found, using defaults.");
+        setSettings(DEFAULT_SETTINGS);
       }
     } catch (err) {
       console.error("Error fetching settings:", err);
       setError("Failed to fetch settings.");
+      // Keep defaults on error so app doesn't crash
+      setSettings(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
     }
@@ -49,8 +60,6 @@ export const SettingsProvider = ({ children }) => {
 
   const updateSettings = useCallback((newSettings) => {
     setSettings((prev) => ({
-      ...prev,
-      ...newSettings,
       platform: { ...prev.platform, ...newSettings.platform },
       notifications: { ...prev.notifications, ...newSettings.notifications },
     }));
@@ -58,14 +67,10 @@ export const SettingsProvider = ({ children }) => {
 
   const saveSettings = useCallback(async (newSettings) => {
     try {
-      // ✅ Security: Only an authenticated user can save settings
       if (!auth.currentUser) {
         throw new Error("You must be logged in to save settings.");
       }
-
-      // Saves directly to Firestore
       await setDoc(settingsRef, newSettings, { merge: true });
-
       updateSettings(newSettings);
       return true;
     } catch (err) {
@@ -75,16 +80,9 @@ export const SettingsProvider = ({ children }) => {
   }, [updateSettings]);
 
   const resetSettings = useCallback(async () => {
-    const defaultSettings = {
-      platform: { maintenance: false, allowSignups: true, allowPostings: true, allowApplications: true, allowChats: true },
-      notifications: { emailAlerts: true, pushAlerts: true, inAppAlerts: true, autoCleanup: false },
-    };
-    
-    setSettings(defaultSettings);
-    
-    // Also reset it in Firestore if logged in
+    setSettings(DEFAULT_SETTINGS);
     if (auth.currentUser) {
-      await setDoc(settingsRef, defaultSettings, { merge: true });
+      await setDoc(settingsRef, DEFAULT_SETTINGS, { merge: true });
     }
   }, []);
 
