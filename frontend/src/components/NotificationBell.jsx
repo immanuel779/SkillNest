@@ -10,7 +10,7 @@ const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch using getDocs (NO INDEX ERRORS!)
+  // Fetch using getDocs (NO INDEX ERRORS - NO startTime CRASH!)
   const fetchNotifications = async () => {
     if (!user) return;
     try {
@@ -30,7 +30,7 @@ const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
+    const interval = setInterval(fetchNotifications, 10000); // Refresh every 10 seconds
     return () => clearInterval(interval);
   }, [user]);
 

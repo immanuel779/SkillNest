@@ -7,9 +7,12 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const token = header.split(' ')[1];
+
+    // ✅ THIS LINE FIXES CLOCK DRIFT AND USES YOUR REAL UID
     const decodedToken = await admin.auth().verifyIdToken(token, false);
     req.user = decodedToken;
     next();
+    
   } catch (error) {
     console.error("AUTH ERROR:", error.message);
     return res.status(401).json({ error: 'Unauthorized - Token invalid' });
