@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { FaArrowLeft, FaSearch, FaUserCircle } from "react-icons/fa";
-import AppLayout from "../components/AppLayout"; // ✅ Import AppLayout
+import AppLayout from "../components/AppLayout";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -16,7 +16,6 @@ const Messages = () => {
   const [searching, setSearching] = useState(false);
   const [noResults, setNoResults] = useState(false);
 
-  // Helper: Get time ago
   const timeAgo = (timestamp) => {
     if (!timestamp) return "";
     const seconds = Math.floor((Date.now() - timestamp.seconds * 1000) / 1000);
@@ -33,14 +32,12 @@ const Messages = () => {
 
     const fetchChats = async () => {
       try {
-        const q = query(
-          collection(db, "chats"),
-          where("participants", "array-contains", user.uid)
-        );
+        // 1. Fetch ALL chats
+        const q = query(collection(db, "chats"), where("participants", "array-contains", user.uid));
         const snapshot = await getDocs(q);
         const chatList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-        // Fetch ALL users and build a UID/Email map
+        // 2. Fetch ALL users and build a map for UID + Email
         const usersSnapshot = await getDocs(collection(db, "users"));
         const usersMap = {};
         usersSnapshot.docs.forEach(userDoc => {
@@ -49,32 +46,27 @@ const Messages = () => {
           if (data.email) usersMap[data.email] = data; // Map by Email
         });
 
-        // Map chats to user names (FIXED)
+        // 3. Map chat participants to actual names
         const chatListWithNames = await Promise.all(
           chatList.map(async (chat) => {
+            // Try to find the other user by UID or Email in the map
             const otherUserId = chat.participants.find((id) => id !== user.uid);
-            
-            // FIXED: This now looks up the user correctly by UID or Email
-            const otherUserData = usersMap[otherUserId] || null;
+            const otherUserData = usersMap[otherUserId] || usersMap[otherUserId] || null;
             
             const otherUserName = otherUserData?.name || otherUserData?.organizationName || "User";
             const otherUserAvatar = otherUserData?.avatarUrl || "";
-            const otherUserEmail = otherUserData?.email || "";
             const otherUserOrg = otherUserData?.organizationName || "";
 
             return { 
               ...chat, 
               otherUserName,
               otherUserAvatar,
-              otherUserEmail,
               otherUserOrg
             };
           })
         );
 
-        // Sort locally by last message date
         chatListWithNames.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
-
         setChats(chatListWithNames);
       } catch (error) {
         console.error("Error fetching chats:", error);
@@ -85,7 +77,6 @@ const Messages = () => {
     fetchChats();
   }, [user]);
 
-  // Improved Search (Search by Name, Org, or Email)
   const handleSearch = async (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -110,7 +101,7 @@ const Messages = () => {
         (u.email || "").toLowerCase().includes(value.toLowerCase())
       );
 
-      const filteredWithoutSelf = filteredUsers.filter(u => u.id !== user.uid);
+      const filteredWithoutSelf = filteredUsers.filter(u => u.id !== user.uid && u.email !== user.email);
       filteredWithoutSelf.sort((a, b) => (a.name || "z").localeCompare(b.name || "z"));
 
       setSearchResults(filteredWithoutSelf);
@@ -128,9 +119,7 @@ const Messages = () => {
       let existingChat = null;
       chatsSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.participants.includes(user.uid) && data.participants.includes(userId)) {
-          existingChat = doc;
-        }
+        if (data.participants.includes(user.uid) && data.participants.includes(userId)) existingChat = doc;
       });
 
       let chatId;
@@ -151,84 +140,28 @@ const Messages = () => {
     }
   };
 
-  if (loading) {
-    return <div className="dashboard-loader"><div className="loader-spinner"></div><p>Loading Chats...</p></div>;
-  }
+  if (loading) return <div className="dashboard-loader"><div className="loader-spinner"></div><p>Loading Chats...</p></div>;
 
   return (
-    <AppLayout> {/* ✅ Wrapped with AppLayout for Hamburger + Bell! */}
+    <AppLayout>
       <div className="browse-container">
-        {/* Header with Back Button */}
         <div className="browse-header">
-          <button className="back-btn" onClick={() => navigate('/dashboard')}>
-            <FaArrowLeft /> Back
-          </button>
+          <button className="back-btn" onClick={() => navigate('/dashboard')}><FaArrowLeft /> Back</button>
           <h1>Messages</h1>
-          <Link to="/browse" className="btn btn-primary" style={{ width: 'auto', padding: '10px 20px', marginBottom: 0 }}>
-            ➕ Start New Chat
-          </Link>
+          <Link to="/browse" className="btn btn-primary">➕ Start New Chat</Link>
         </div>
 
-        {/* Search Bar */}
-        <div className="search-wrapper" style={{ marginBottom: '20px' }}>
+        <div className="search-wrapper">
           <span className="search-icon"><FaSearch /></span>
-          <input 
-            type="text" 
-            className="input-field" 
-            placeholder="Search by name, organization, or email..." 
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-          {searchTerm && (
-            <button 
-              onClick={() => setSearchTerm("")}
-              style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}
-            >
-              ✕
-            </button>
-          )}
+          <input className="input-field" placeholder="Search by name, organization, or email..." value={searchTerm} onChange={handleSearch} />
         </div>
-
-        {searching && <div className="empty-state"><div className="loader-spinner"></div><p>Searching users...</p></div>}
-
-        {!searching && searchTerm && noResults && (
-          <div className="empty-state">
-            <div className="empty-icon">🔍</div>
-            <h3>User Not Found</h3>
-            <p style={{ opacity: 0.7 }}>No user with that name, org, or email exists.</p>
-          </div>
-        )}
-
-        {!searching && searchTerm && searchResults.length > 0 && (
-          <div className="chat-list" style={{ marginBottom: '20px' }}>
-            <h3 className="section-title" style={{ marginBottom: '10px' }}>Search Results</h3>
-            {searchResults.map(user => (
-              <div key={user.id} className="chat-list-item" onClick={() => startNewChat(user.id)} style={{ cursor: 'pointer' }}>
-                <div className="chat-avatar">
-                  {user.avatarUrl ? <img src={user.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <FaUserCircle />}
-                </div>
-                <div className="chat-info">
-                  <h4>{user.name || "User"}</h4>
-                  <p style={{ opacity: 0.7, fontSize: "0.9rem" }}>
-                    {user.organizationName || user.email || user.role || "SkillNest User"}
-                  </p>
-                </div>
-                <span className="chat-arrow">💬 Start Chat</span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {!searchTerm && chats.length === 0 && (
           <div className="empty-state">
             <div className="empty-icon">💬</div>
             <h3>No Chats Yet</h3>
-            <p style={{ opacity: 0.8, marginBottom: '20px' }}>
-              Find an opportunity that matches your skills, click "Apply & Chat" and start talking to the employer!
-            </p>
-            <Link to="/browse" className="btn btn-primary" style={{ width: 'auto', padding: '12px 30px' }}>
-              🔍 Browse Opportunities
-            </Link>
+            <p style={{ opacity: 0.8, marginBottom: '20px' }}>Find an opportunity and click "Apply & Chat" to start talking to the employer!</p>
+            <Link to="/browse" className="btn btn-primary">🔍 Browse Opportunities</Link>
           </div>
         )}
 
@@ -241,18 +174,32 @@ const Messages = () => {
                 </div>
                 <div className="chat-info">
                   <h4>{chat.otherUserName} {chat.otherUserOrg ? <span style={{ color: '#ff8c00', fontSize: '0.8rem' }}>({chat.otherUserOrg})</span> : null}</h4>
-                  <p style={{ opacity: 0.7, fontSize: "0.9rem" }}>
-                    {chat.lastMessage ? chat.lastMessage : "Start the conversation..."}
-                  </p>
-                  <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>
-                    {timeAgo(chat.updatedAt)}
-                  </span>
+                  <p style={{ opacity: 0.7, fontSize: "0.9rem" }}>{chat.lastMessage ? chat.lastMessage : "Start the conversation..."}</p>
+                  <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>{timeAgo(chat.updatedAt)}</span>
                 </div>
                 <span className="chat-arrow">➜</span>
               </Link>
             ))}
           </div>
         )}
+
+        {searchTerm && searchResults.length > 0 && (
+          <div className="chat-list">
+            <h3 className="section-title">Search Results</h3>
+            {searchResults.map(user => (
+              <div key={user.id} className="chat-list-item" onClick={() => startNewChat(user.id)} style={{ cursor: 'pointer' }}>
+                <div className="chat-avatar">{user.avatarUrl ? <img src={user.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <FaUserCircle />}</div>
+                <div className="chat-info">
+                  <h4>{user.name || "User"}</h4>
+                  <p style={{ opacity: 0.7, fontSize: "0.9rem" }}>{user.organizationName || user.email || user.role}</p>
+                </div>
+                <span className="chat-arrow">💬 Start Chat</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {searchTerm && noResults && <div className="empty-state"><div className="empty-icon">🔍</div><h3>User Not Found</h3></div>}
       </div>
     </AppLayout>
   );
