@@ -13,26 +13,25 @@ module.exports = async (req, res, next) => {
     }
     const token = header.split(' ')[1];
 
-    // Strict check first
+    // 1. Strict check
     try {
       const decodedToken = await admin.auth().verifyIdToken(token, true);
       req.user = decodedToken;
       return next();
     } catch (strictError) {
-      // Retry with clock tolerance
+      // 2. Retry with clock tolerance (60 seconds)
       try {
         const decodedToken = await admin.auth().verifyIdToken(token, false);
         const now = Math.floor(Date.now() / 1000);
-        const exp = decodedToken.exp;
-        if (exp && exp < now - 60) {
+        if (decodedToken.exp && decodedToken.exp < now - 60) {
           throw new Error('Token expired');
         }
         req.user = decodedToken;
         return next();
       } catch (toleranceError) {
-        // Local bypass only
+        // 3. Local dev bypass only (never in production)
         if (ALLOW_LOCAL_BYPASS && !IS_PRODUCTION) {
-          console.warn("⚠️ Using temporary bypass.");
+          console.warn("⚠️ Using temporary bypass (LOCAL ONLY).");
           req.user = { uid: 'debug-user', email: 'debug@example.com' };
           return next();
         }

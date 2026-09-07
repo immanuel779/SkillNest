@@ -18,50 +18,7 @@ const PostNeed = () => {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
-  // ✅ EXPANDED SKILLS LIST (Tech + Vocational + Career)
-  const skills = [
-    // Tech & Digital
-    "Frontend Developer", "Backend Developer", "Full Stack Developer", "Mobile App Developer", 
-    "UI/UX Designer", "Graphic Designer", "Product Designer", "Data Analyst", "Data Scientist", 
-    "Machine Learning Engineer", "DevOps Engineer", "Cloud Engineer", "Cybersecurity Specialist", 
-    "IT Support Specialist", "Software Tester",
-    // Vocational & Trades
-    "Electrician", "Plumber", "Welder", "Carpenter", "Mason", "Painter", "Auto Mechanic", 
-    "HVAC Technician", "Solar Panel Installer", "Generator Repairer", "Tailor", "Fashion Designer", 
-    "Hair Stylist", "Barber", "Makeup Artist", "Shoemaker", "Upholsterer", "Glass Fitter", "Tiler",
-    // Creative & Media
-    "Content Writer", "Copywriter", "Technical Writer", "Blogger", "Editor", "Proofreader", 
-    "Video Editor", "Photographer", "Animator", "3D Designer", "Illustrator", "Voice Over Artist", 
-    "Music Producer", "DJ", "Actor", "Model", "Social Media Manager", "SEO Specialist", 
-    "Email Marketer", "Brand Strategist",
-    // Business & Management
-    "Project Manager", "Product Manager", "Business Analyst", "Accountant", "Financial Analyst", 
-    "Auditor", "Lawyer", "HR Specialist", "Recruiter", "Sales Representative", "Customer Support", 
-    "Community Manager", "Event Planner", "Virtual Assistant", "Admin Assistant", "Data Entry Clerk", 
-    "Logistic Coordinator", "Supply Chain Manager",
-    // Education & Training
-    "Tutor", "Teacher", "Curriculum Developer", "Translator", "Language Instructor", 
-    "Academic Coach", "Exam Preparer", "Online Course Creator", "Podcast Host",
-    // Healthcare & Wellness
-    "Nurse", "Caregiver", "Pharmacist", "Doctor", "Dentist", "Physiotherapist", "Psychologist", 
-    "Nutritionist", "Fitness Trainer", "Yoga Instructor", "Massage Therapist", "Counselor",
-    // Hospitality & Service
-    "Chef", "Cook", "Waiter", "Bartender", "Hotel Manager", "Housekeeper", "Tour Guide", 
-    "Flight Attendant", "Barista", "Caterer",
-    // Construction & Engineering
-    "Civil Engineer", "Structural Engineer", "Architect", "Surveyor", "Site Supervisor", 
-    "Heavy Equipment Operator", "Crane Operator", "Scaffolder",
-    // Transportation & Logistics
-    "Driver", "Delivery Rider", "Truck Driver", "Pilot", "Ship Captain", "Warehouse Manager", 
-    "Customs Officer",
-    // Agriculture & Environment
-    "Farmer", "Agronomist", "Fisherman", "Gardener", "Landscaper", "Animal Caretaker", 
-    "Environmental Scientist",
-    // Other
-    "Security Guard", "Cleaner", "Laundry Attendant", "Janitor", "Decorator", 
-    "Call Center Agent", "Telemarketer"
-  ];
-
+  const skills = ["Frontend Developer", "Backend Developer", "Full Stack Developer", "UI/UX Designer", "Graphic Designer", "Data Analyst", "Content Writer", "Digital Marketer", "Video Editor", "Tutor", "Project Manager", "3D Designer", "Mobile App Developer", "Cybersecurity Specialist", "Virtual Assistant"];
   const locations = ["Lagos", "Abuja", "Port Harcourt", "Ibadan", "Kano", "Enugu", "Kaduna", "Ogun", "Remote", "Other"];
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -73,8 +30,7 @@ const PostNeed = () => {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const token = await auth.currentUser.getIdToken(true);
-      // ✅ Fixed to Render URL
+      const token = await auth.currentUser.getIdToken(true); // Force fresh token
       const response = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
         method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData
       });
@@ -93,12 +49,14 @@ const PostNeed = () => {
     e.preventDefault();
     setLoading(true); setError(null); setMessage(null);
 
+    // Check admin settings
     if (!settings.platform.allowPostings) {
       setError("Job postings are currently disabled. Please contact the admin team.");
       setLoading(false);
       return;
     }
 
+    // Check if user is logged in
     if (!auth.currentUser) {
       setError("You must be logged in to post a job.");
       setLoading(false);
@@ -109,8 +67,7 @@ const PostNeed = () => {
       const imageUrl = await uploadBrandImage();
       if (imageUrl === null) { setLoading(false); return; }
 
-      const token = await auth.currentUser.getIdToken(true);
-      // ✅ Fixed to Render URL
+      const token = await auth.currentUser.getIdToken(true); // Force fresh token
       const response = await fetch("https://skillnest-88fd.onrender.com/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -119,7 +76,12 @@ const PostNeed = () => {
       const data = await response.json();
 
       if (response.status === 401) {
-        setError("Session expired. Please log out and log back in.");
+        // If token fails, force logout and redirect
+        setError("Session expired. Please log out and log back in to continue.");
+        setTimeout(() => {
+          auth.signOut();
+          navigate("/login");
+        }, 2000);
       } else if (response.status === 403) {
         setError(data.error || "You do not have permission to post.");
       } else if (!response.ok) {
