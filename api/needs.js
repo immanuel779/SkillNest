@@ -13,7 +13,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://skill-nest-flame.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', 'https://skill-nest-psi.vercel.app');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
