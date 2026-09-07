@@ -7,12 +7,9 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const token = header.split(' ')[1];
-
-    // 🔥 THE FINAL FIX: No clock check at all. Just verify the signature.
     const decodedToken = await admin.auth().verifyIdToken(token, false);
     req.user = decodedToken;
     next();
-    
   } catch (error) {
     console.error("AUTH ERROR:", error.message);
     return res.status(401).json({ error: 'Unauthorized - Token invalid' });

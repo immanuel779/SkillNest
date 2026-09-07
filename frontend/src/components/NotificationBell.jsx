@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, query, where, onSnapshot, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { FaBell, FaCheckDouble, FaTrashAlt } from "react-icons/fa";
 
@@ -10,19 +10,28 @@ const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
+  // Fetch using getDocs (NO INDEX ERRORS!)
+  const fetchNotifications = async () => {
     if (!user) return;
-
-    // Real-time listener
-    const q = query(collection(db, "notifications"), where("recipientId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    try {
+      const q = query(collection(db, "notifications"), where("recipientId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+      const notifs = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort locally (NEWEST FIRST)
       notifs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      
       setNotifications(notifs);
       setUnreadCount(notifs.filter((n) => !n.read).length);
-    });
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
 
-    return unsubscribe;
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const markAsRead = async (id) => {
