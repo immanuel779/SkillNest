@@ -29,7 +29,7 @@ export const SettingsProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:5000/api/settings");
+      const res = await fetch("https://skillnest-88fd.onrender.com/api/settings");
       const data = await res.json();
       // Only update if we get valid data from backend
       if (data && data.platform && data.notifications) {
@@ -63,7 +63,7 @@ export const SettingsProvider = ({ children }) => {
   const saveSettings = useCallback(async (newSettings) => {
     try {
       const token = await import("../firebase").then(m => m.auth.currentUser.getIdToken());
-      const res = await fetch("http://localhost:5000/api/settings", {
+      const res = await fetch("https://skillnest-88fd.onrender.com/api/settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

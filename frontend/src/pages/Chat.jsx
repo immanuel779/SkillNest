@@ -95,7 +95,7 @@ const Chat = () => {
       formData.append("file", file);
       const token = await currentUser.getIdToken();
 
-      const res = await fetch("http://localhost:5000/api/upload", {
+      const res = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData
