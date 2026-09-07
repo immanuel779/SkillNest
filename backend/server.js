@@ -43,7 +43,8 @@ const app = express();
 // =========================================
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://skill-nest-plum.vercel.app" // ✅ YOUR REAL VERCEL URL
+  "https://skill-nest-plum.vercel.app",
+  "https://skillnest-88fd.onrender.com"
 ];
 app.use(cors({
   origin: function (origin, callback) {
