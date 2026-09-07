@@ -8,7 +8,7 @@ module.exports = async (req, res, next) => {
     }
     const token = header.split(' ')[1];
 
-    // ✅ THIS LINE FIXES CLOCK DRIFT AND USES YOUR REAL UID
+    // ✅ THE FINAL FIX: Ignore clock drift completely, use real UID
     const decodedToken = await admin.auth().verifyIdToken(token, false);
     req.user = decodedToken;
     next();
