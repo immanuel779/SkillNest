@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { FaArrowLeft, FaSearch, FaUserCircle } from "react-icons/fa";
 import AppLayout from "../components/AppLayout";
 
@@ -32,26 +32,30 @@ const Messages = () => {
 
     const fetchChats = async () => {
       try {
-        // 1. Fetch ALL chats
-        const q = query(collection(db, "chats"), where("participants", "array-contains", user.uid));
-        const snapshot = await getDocs(q);
-        const chatList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        // 1. Fetch ALL chats (no where query!)
+        const snapshot = await getDocs(collection(db, "chats"));
+        const allChats = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        
+        // 2. Filter chats where the current user is a participant
+        const chatList = allChats.filter(chat => 
+          chat.participants.includes(user.uid) || 
+          chat.participants.includes(user.email)
+        );
 
-        // 2. Fetch ALL users and build a map for UID + Email
+        // 3. Fetch ALL users and build a map
         const usersSnapshot = await getDocs(collection(db, "users"));
         const usersMap = {};
         usersSnapshot.docs.forEach(userDoc => {
           const data = userDoc.data();
-          usersMap[userDoc.id] = data; // Map by UID
-          if (data.email) usersMap[data.email] = data; // Map by Email
+          usersMap[userDoc.id] = data;
+          if (data.email) usersMap[data.email] = data;
         });
 
-        // 3. Map chat participants to actual names
+        // 4. Map chat participants to actual names
         const chatListWithNames = await Promise.all(
           chatList.map(async (chat) => {
-            // Try to find the other user by UID or Email in the map
-            const otherUserId = chat.participants.find((id) => id !== user.uid);
-            const otherUserData = usersMap[otherUserId] || usersMap[otherUserId] || null;
+            const otherUserId = chat.participants.find((id) => id !== user.uid && id !== user.email);
+            const otherUserData = usersMap[otherUserId] || null;
             
             const otherUserName = otherUserData?.name || otherUserData?.organizationName || "User";
             const otherUserAvatar = otherUserData?.avatarUrl || "";
