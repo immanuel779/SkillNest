@@ -30,7 +30,7 @@ const PostNeed = () => {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const token = await auth.currentUser.getIdToken(true); // Force fresh token
+      const token = await auth.currentUser.getIdToken(true);
       const response = await fetch("https://skillnest-88fd.onrender.com/api/upload", {
         method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData
       });
@@ -49,14 +49,12 @@ const PostNeed = () => {
     e.preventDefault();
     setLoading(true); setError(null); setMessage(null);
 
-    // Check admin settings
     if (!settings.platform.allowPostings) {
       setError("Job postings are currently disabled. Please contact the admin team.");
       setLoading(false);
       return;
     }
 
-    // Check if user is logged in
     if (!auth.currentUser) {
       setError("You must be logged in to post a job.");
       setLoading(false);
@@ -67,7 +65,7 @@ const PostNeed = () => {
       const imageUrl = await uploadBrandImage();
       if (imageUrl === null) { setLoading(false); return; }
 
-      const token = await auth.currentUser.getIdToken(true); // Force fresh token
+      const token = await auth.currentUser.getIdToken(true);
       const response = await fetch("https://skillnest-88fd.onrender.com/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -75,13 +73,11 @@ const PostNeed = () => {
       });
       const data = await response.json();
 
+      // ✅ FIXED: Don't log out on 401! Just tell them to wait and click again.
       if (response.status === 401) {
-        // If token fails, force logout and redirect
-        setError("Session expired. Please log out and log back in to continue.");
-        setTimeout(() => {
-          auth.signOut();
-          navigate("/login");
-        }, 2000);
+        setError("Backend is starting up. Please wait 5 seconds and click 'Post Need' again.");
+        setLoading(false);
+        return;
       } else if (response.status === 403) {
         setError(data.error || "You do not have permission to post.");
       } else if (!response.ok) {
