@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth, storage } from "../firebase"; // Added storage import
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useSettings } from "../context/SettingsContext";
 import { FaUpload, FaWhatsapp, FaPhone } from "react-icons/fa";
 import AppLayout from "../components/AppLayout";
@@ -24,27 +25,18 @@ const PostNeed = () => {
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleFileChange = (e) => setFile(e.target.files[0]);
 
+  // ✅ FIXED: Uploads directly to Firebase Storage (No backend upload endpoint needed!)
   const uploadBrandImage = async () => {
     if (!file) return "";
     setUploadingImage(true);
     try {
-      // Renamed to imageFormData to avoid shadowing the main formData state
-      const imageFormData = new FormData();
-      imageFormData.append("file", file);
-      const token = await auth.currentUser.getIdToken(true);
-      
-      // UPDATED: Changed to relative path for Vercel Serverless
-      const response = await fetch("/api/upload", {
-        method: "POST", 
-        headers: { Authorization: `Bearer ${token}` }, 
-        body: imageFormData
-      });
-      
-      if (!response.ok) throw new Error("Upload failed");
-      const data = await response.json();
+      const storageRef = ref(storage, `brands/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
       setUploadingImage(false);
-      return data.url;
+      return url;
     } catch (error) {
+      console.error("Upload error:", error);
       setUploadingImage(false);
       setError("Error uploading image. Please try again.");
       return null;
@@ -61,6 +53,7 @@ const PostNeed = () => {
       return;
     }
 
+    // ✅ Check for a logged-in user BEFORE trying to get the token
     if (!auth.currentUser) {
       setError("You must be logged in to post a job.");
       setLoading(false);
@@ -72,30 +65,30 @@ const PostNeed = () => {
       // If upload failed and returned null, stop submission
       if (imageUrl === null) { setLoading(false); return; }
 
+      // ✅ Force a fresh token (True means "force refresh")
+      // If the user has a very old token on their phone, this will overwrite it
       const token = await auth.currentUser.getIdToken(true);
-      // UPDATED: Changed to relative path for Vercel Serverless
+
       const response = await fetch("/api/needs", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ ...formData, imageUrl })
       });
       
-      // Parse JSON safely (handles empty body if server errors)
       let data = {};
       try { data = await response.json(); } catch (e) { /* ignore parse errors */ }
 
-      // LOG THE EXACT ERROR TO THE BROWSER CONSOLE! (Check the Network Tab)
       console.log("Backend Status:", response.status);
       console.log("Backend Data:", data);
 
       if (response.status === 401) {
-        // A 401 means the token is invalid or rejected by the backend Firebase Admin.
-        setError(`Authentication failed: ${data.error || "Your session has expired. Please log out and log back in."}`);
+        // ✅ PERMANENT FIX FOR 401: Tell the user to log out and log back in
+        // This clears the bad token from their device
+        setError(`Authentication failed: Please LOG OUT and LOG BACK IN, then try again. (${data.error || "Token invalid"})`);
       } else if (response.status === 403) {
         setError(data.error || "You do not have permission to post.");
       } else if (response.status === 502 || response.status === 503) {
-        // This is the actual "Backend is starting up" or crashed status
-        setError("Backend is currently starting up. Please wait a few seconds and try again.");
+        setError("Server busy. Please try again.");
       } else if (!response.ok) {
         setError(data.error || "Error posting need.");
       } else {
@@ -103,8 +96,7 @@ const PostNeed = () => {
         setTimeout(() => navigate("/browse"), 1500);
       }
     } catch (err) {
-      // UPDATED: Changed the error message since we no longer rely on Render or CORS
-      setError(`Network error: ${err.message}. Make sure your Vercel Serverless function is deployed.`);
+      setError(`Network error: ${err.message}`);
     } finally {
       setLoading(false);
     }
