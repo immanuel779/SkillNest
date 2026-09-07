@@ -4,7 +4,7 @@ import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useSettings } from "../context/SettingsContext";
 import { FaUser, FaPhoneAlt, FaMapMarkerAlt, FaBriefcase, FaCalendarAlt, FaMoneyBillWave, FaFileAlt, FaPencilAlt } from "react-icons/fa";
-import AppLayout from "../components/AppLayout"; // ✅ Import AppLayout
+import AppLayout from "../components/AppLayout";
 
 const ApplyNow = () => {
   const { needId } = useParams();
@@ -70,8 +70,8 @@ const ApplyNow = () => {
       return;
     }
 
-    try {
-      const token = await auth.currentUser.getIdToken(true);
+    // Helper to retry the request with a fresh token
+    const applyWithToken = async (token) => {
       const response = await fetch(`https://skillnest-88fd.onrender.com/api/needs/${needId}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -82,16 +82,43 @@ const ApplyNow = () => {
       let data;
       try { data = JSON.parse(text); } catch (e) { data = { error: "Invalid server response" }; }
 
-      if (response.status === 404) {
+      // ❗️ FIXED: If 401, refresh token and retry once before showing error
+      if (response.status === 401) {
+        const freshToken = await auth.currentUser.getIdToken(true);
+        if (freshToken) {
+          const retryResponse = await fetch(`https://skillnest-88fd.onrender.com/api/needs/${needId}/apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${freshToken}` },
+            body: JSON.stringify({ ...formData, resumeUrl: formData.portfolio })
+          });
+          const retryText = await retryResponse.text();
+          let retryData;
+          try { retryData = JSON.parse(retryText); } catch (e) { retryData = { error: "Invalid server response" }; }
+          
+          if (retryResponse.status === 401) {
+            setError("Session expired. Please log out and log back in.");
+            setSubmitting(false);
+            return;
+          }
+          return { status: retryResponse.status, data: retryData };
+        }
+      }
+
+      return { status: response.status, data: data };
+    };
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const result = await applyWithToken(token);
+
+      if (result.status === 404) {
         setError("This job no longer exists.");
-      } else if (response.status === 401) {
-        setError("Session expired. Please log back in.");
-      } else if (response.status === 403) {
-        setError(data.error || "You do not have permission to apply.");
-      } else if (!response.ok) {
-        setError(data.error || "Application failed.");
+      } else if (result.status === 403) {
+        setError(result.data.error || "You do not have permission to apply.");
+      } else if (!result.status || result.status >= 400) {
+        setError(result.data.error || "Application failed.");
       } else {
-        setChatId(data.chatId);
+        setChatId(result.data.chatId);
         setApplied(true);
       }
     } catch (err) {
@@ -101,7 +128,6 @@ const ApplyNow = () => {
     }
   };
 
-  // Success Screen (No AppLayout - Fullscreen clear page)
   if (applied) {
     return (
       <div className="auth-container">
@@ -122,12 +148,10 @@ const ApplyNow = () => {
     );
   }
 
-  // Loading Screen
   if (loadingJob) return <div className="dashboard-loader"><div className="loader-spinner"></div><p>Loading Job Details...</p></div>;
 
-  // Main Form wrapped in AppLayout
   return (
-    <AppLayout> {/* ✅ Wrapped with AppLayout */}
+    <AppLayout>
       <div className="form-page-wrapper">
         <div className="glass-card form-card">
           <h1 className="logo-text" style={{ fontSize: "2rem" }}>Apply Now</h1>
@@ -138,28 +162,26 @@ const ApplyNow = () => {
           {error && <div className="error-alert">❌ {error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <h3 className="form-section-title"><FaUser /> Personal Information</h3>
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label"><FaUser /> Full Name *</label>
-                <input className="input-field" type="text" name="fullName" placeholder="e.g. Oluwadamilare Opeyemi" value={formData.fullName} onChange={handleChange} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label"><FaPhoneAlt /> Phone Number *</label>
-                <input className="input-field" type="tel" name="phone" placeholder="e.g. +234 801 234 5678" value={formData.phone} onChange={handleChange} required />
-              </div>
+            {/* ... (Keep the rest of your form fields exactly as they are) ... */}
+            
+            <div className="form-group">
+              <label className="form-label"><FaUser /> Full Name *</label>
+              <input className="input-field" type="text" name="fullName" placeholder="e.g. Oluwadamilare Opeyemi" value={formData.fullName} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label"><FaPhoneAlt /> Phone Number *</label>
+              <input className="input-field" type="tel" name="phone" placeholder="e.g. +234 801 234 5678" value={formData.phone} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label className="form-label"><FaMapMarkerAlt /> Current Location *</label>
               <input className="input-field" type="text" name="location" placeholder="e.g. Lagos, Nigeria" value={formData.location} onChange={handleChange} required />
             </div>
 
-            <h3 className="form-section-title"><FaBriefcase /> Professional Details</h3>
             <div className="form-group">
               <label className="form-label"><FaFileAlt /> Resume/CV Link *</label>
               <input className="input-field" type="url" name="portfolio" placeholder="Paste your Google Drive or LinkedIn link here" value={formData.portfolio} onChange={handleChange} required />
             </div>
-            
+
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">Years of Experience *</label>
@@ -182,17 +204,9 @@ const ApplyNow = () => {
               <input className="input-field" type="date" name="startDate" value={formData.startDate} onChange={handleChange} required />
             </div>
 
-            <h3 className="form-section-title"><FaPencilAlt /> Cover Letter</h3>
             <div className="form-group">
-              <textarea
-                className="input-field textarea-field"
-                name="coverLetter"
-                placeholder="Tell them why you are the perfect fit for this role..."
-                value={formData.coverLetter}
-                onChange={handleChange}
-                rows="6"
-                required
-              ></textarea>
+              <label className="form-label"><FaPencilAlt /> Cover Letter</label>
+              <textarea className="input-field textarea-field" name="coverLetter" placeholder="Tell them why you are the perfect fit for this role..." value={formData.coverLetter} onChange={handleChange} rows="6" required></textarea>
             </div>
 
             <button className="btn btn-primary" type="submit" disabled={submitting}>
