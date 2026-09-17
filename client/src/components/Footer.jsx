@@ -58,7 +58,7 @@ export default function Footer() {
                   key={i}
                   href={
                     Icon === Mail
-                      ? 'mailto:hello@skillnest.dev'
+                      ? 'mailto:hello@opeyemioluwadamilare415@gmail.com'
                       : '#'
                   }
                   aria-label={`social-${i}`}
