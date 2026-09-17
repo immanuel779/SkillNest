@@ -20,6 +20,7 @@ import {
 } from '../services/applicationService'
 import { ensureConversation } from '../services/messageService'
 import { openWhatsApp } from '../utils/whatsapp'
+import { friendlyError } from '../utils/errors'
 
 const PIPELINE = [
   { v: 'all', l: 'All' },
@@ -65,7 +66,7 @@ export default function EmployerJobApplicants() {
     try {
       const j = await getJob(jobId)
       if (!j || j.ownerId !== user.uid) {
-        setError('Not your job')
+        setError('This job doesn\'t belong to your account.')
         return
       }
       setJob(j)
@@ -85,7 +86,7 @@ export default function EmployerJobApplicants() {
       )
       setProfiles(p)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
     }
@@ -101,6 +102,8 @@ export default function EmployerJobApplicants() {
     try {
       await updateApplicationStatus(app.id, status)
       await load()
+    } catch (err) {
+      setError(friendlyError(err))
     } finally {
       setBusyId(null)
     }
@@ -122,7 +125,7 @@ export default function EmployerJobApplicants() {
       navigate(`/messages?c=${convId}`)
     } catch (err) {
       console.error('Failed to start conversation:', err)
-      alert(`Could not open conversation: ${err.message}`)
+      setError(friendlyError(err))
     } finally {
       setBusyId(null)
     }
@@ -172,8 +175,14 @@ export default function EmployerJobApplicants() {
       </p>
 
       {error && (
-        <div className="mb-6 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-          {error}
+        <div className="mb-6 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="text-red-500 hover:text-red-700 text-xs font-semibold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 

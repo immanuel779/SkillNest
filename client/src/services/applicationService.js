@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { createNotification, notifyAdmins } from './notificationService'
+import { isPermissionError } from '../utils/errors'
 
 const sortByCreatedDesc = (arr) =>
   [...arr].sort((a, b) => {
@@ -57,19 +58,32 @@ function statusNotification(status, jobTitle, companyName) {
 }
 
 export async function listApplicationsForJob(jobId, employerId) {
-  const q = query(
-    collection(db, 'applications'),
-    where('jobId', '==', jobId),
-    where('employerId', '==', employerId)
-  )
-  const snap = await getDocs(q)
-  return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  try {
+    const q = query(
+      collection(db, 'applications'),
+      where('jobId', '==', jobId),
+      where('employerId', '==', employerId)
+    )
+    const snap = await getDocs(q)
+    return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  } catch (err) {
+    if (isPermissionError(err)) return []
+    throw err
+  }
 }
 
 export async function listMyApplications(uid) {
-  const q = query(collection(db, 'applications'), where('applicantId', '==', uid))
-  const snap = await getDocs(q)
-  return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  try {
+    const q = query(
+      collection(db, 'applications'),
+      where('applicantId', '==', uid)
+    )
+    const snap = await getDocs(q)
+    return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+  } catch (err) {
+    if (isPermissionError(err)) return []
+    throw err
+  }
 }
 
 export async function hasApplied(uid, jobId) {
@@ -105,7 +119,6 @@ export async function createApplication(uid, email, job, data) {
     updatedAt: serverTimestamp(),
   })
 
-  // Increment job applicant count
   try {
     const jobRef = doc(db, 'jobs', job.id)
     const jobSnap = await getDoc(jobRef)
@@ -117,7 +130,6 @@ export async function createApplication(uid, email, job, data) {
     /* best-effort */
   }
 
-  // Notify employer
   try {
     await createNotification({
       userId: job.ownerId,
@@ -130,7 +142,6 @@ export async function createApplication(uid, email, job, data) {
     /* best-effort */
   }
 
-  // Notify admins
   await notifyAdmins({
     type: 'admin_new_application',
     title: '📥 New application on SkillNest',
@@ -152,9 +163,12 @@ export async function updateApplicationStatus(appId, status) {
     updatedAt: serverTimestamp(),
   })
 
-  // Notify candidate
   try {
-    const { title, body } = statusNotification(status, app.jobTitle, app.companyName)
+    const { title, body } = statusNotification(
+      status,
+      app.jobTitle,
+      app.companyName
+    )
     await createNotification({
       userId: app.applicantId,
       type: 'application_status',
@@ -162,17 +176,13 @@ export async function updateApplicationStatus(appId, status) {
       body,
       link: '/applications',
     })
-  } catch (err) {
-    console.warn('Candidate notification failed:', err)
+  } catch {
+    /* best-effort */
   }
 
-  // Notify admins
-  const emoji = {
-    hired: '🎉',
-    rejected: '❌',
-    shortlisted: '⭐',
-    interview: '📅',
-  }[status] || '📊'
+  const emoji =
+    { hired: '🎉', rejected: '❌', shortlisted: '⭐', interview: '📅' }[status] ||
+    '📊'
 
   await notifyAdmins({
     type: 'admin_status_change',
@@ -186,7 +196,8 @@ export async function getApplicantProfile(uid) {
   try {
     const snap = await getDoc(doc(db, 'users', uid))
     return snap.exists() ? { id: snap.id, ...snap.data() } : null
-  } catch {
-    return null
+  } catch (err) {
+    if (isPermissionError(err)) return null
+    throw err
   }
 }

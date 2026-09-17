@@ -1,10 +1,29 @@
 import { useEffect, useState, useRef } from 'react'
-import { Building2, Save, Upload, AlertCircle, CheckCircle2 } from 'lucide-react'
+import {
+  Building2,
+  Save,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMyCompany, createCompany, updateCompany } from '../services/companyService'
+import {
+  getMyCompany,
+  createCompany,
+  updateCompany,
+} from '../services/companyService'
 import { uploadImage } from '../services/storageService'
+import { friendlyError } from '../utils/errors'
 
-const INDUSTRIES = ['Tech', 'Finance', 'Healthcare', 'Education', 'E-commerce', 'Media', 'Other']
+const INDUSTRIES = [
+  'Tech',
+  'Finance',
+  'Healthcare',
+  'Education',
+  'E-commerce',
+  'Media',
+  'Other',
+]
 const SIZES = ['1-10', '11-50', '51-200', '201-500', '500+']
 
 function Field({ label, children }) {
@@ -53,7 +72,7 @@ export default function EmployerCompanyProfile() {
           setForm((f) => ({ ...f, contactEmail: user.email || '' }))
         }
       } catch (err) {
-        if (alive) setError(err.message)
+        if (alive) setError(friendlyError(err))
       } finally {
         if (alive) setLoading(false)
       }
@@ -73,12 +92,11 @@ export default function EmployerCompanyProfile() {
     try {
       const url = await uploadImage(`logos/${user.uid}`, file)
       update('logoUrl', url)
-      // Persist immediately if company already exists
       if (companyId) {
         await updateCompany(companyId, { logoUrl: url })
       }
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setUploading(false)
       if (logoInput.current) logoInput.current.value = ''
@@ -88,7 +106,7 @@ export default function EmployerCompanyProfile() {
   const handleSave = async () => {
     setError('')
     if (!form.name.trim()) {
-      setError('Company name is required')
+      setError('Company name is required.')
       return
     }
     setSaving(true)
@@ -102,7 +120,7 @@ export default function EmployerCompanyProfile() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -119,12 +137,20 @@ export default function EmployerCompanyProfile() {
   return (
     <div className="container-app py-10 pb-32 max-w-3xl">
       <h1 className="text-3xl font-extrabold mb-1">Company Profile</h1>
-      <p className="text-gray-500 mb-8">This is what candidates see on your job posts.</p>
+      <p className="text-gray-500 mb-8">
+        This is what candidates see on your job posts.
+      </p>
 
       {error && (
         <div className="mb-6 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
           <span className="flex-1">{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="text-red-500 hover:text-red-700 text-xs font-semibold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -260,7 +286,11 @@ export default function EmployerCompanyProfile() {
               </>
             )}
           </div>
-          <button onClick={handleSave} disabled={saving || uploading} className="btn-primary">
+          <button
+            onClick={handleSave}
+            disabled={saving || uploading}
+            className="btn-primary"
+          >
             <Save size={16} /> {saving ? 'Saving...' : 'Save Company'}
           </button>
         </div>

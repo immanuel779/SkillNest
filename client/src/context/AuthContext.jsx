@@ -1,12 +1,24 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from 'react'
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  updateProfile,
+  updateProfile as fbUpdateProfile,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import {
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { notifyAdmins } from '../services/notificationService'
 
@@ -16,44 +28,88 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [suspendedNotice, setSuspendedNotice] = useState(false)
 
+  // Watch Firebase auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      if (firebaseUser) {
-        try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-          setProfile(snap.exists() ? snap.data() : null)
-        } catch {
-          setProfile(null)
-        }
-      } else {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      setUser(fbUser)
+      if (!fbUser) {
         setProfile(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsubscribe
   }, [])
 
+  // Real-time listener on the current user's profile.
+  // If they get suspended while logged in, we sign them out immediately.
+  useEffect(() => {
+    if (!user) return
+
+    const unsub = onSnapshot(
+      doc(db, 'users', user.uid),
+      async (snap) => {
+        if (!snap.exists()) {
+          setProfile(null)
+          setLoading(false)
+          return
+        }
+        const data = snap.data()
+
+        if (data.isSuspended === true) {
+          // Flag the reason so the login page can display it
+          setSuspendedNotice(true)
+          try {
+            await signOut(auth)
+          } catch {
+            /* ignore */
+          }
+          setProfile(null)
+          return
+        }
+
+        setProfile(data)
+        setLoading(false)
+      },
+      (err) => {
+        console.warn('Profile listener error:', err)
+        setLoading(false)
+      }
+    )
+
+    return unsub
+  }, [user])
+
   const register = async ({ fullName, email, password, role }) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
-    await updateProfile(cred.user, { displayName: fullName })
+    await fbUpdateProfile(cred.user, { displayName: fullName })
     await setDoc(doc(db, 'users', cred.user.uid), {
       uid: cred.user.uid,
       email,
       fullName,
       role,
+      isSuspended: false,
       createdAt: serverTimestamp(),
     })
-    setProfile({ uid: cred.user.uid, email, fullName, role })
-
-    // Notify admins of new signup
-    await notifyAdmins({
-      type: 'admin_new_user',
-      title: '👤 New user registered',
-      body: `${fullName || email} signed up as ${role.replace('_', ' ')}.`,
-      link: '/admin/users',
+    setProfile({
+      uid: cred.user.uid,
+      email,
+      fullName,
+      role,
+      isSuspended: false,
     })
+
+    try {
+      await notifyAdmins({
+        type: 'admin_new_user',
+        title: '👤 New user registered',
+        body: `${fullName || email} signed up as ${role.replace('_', ' ')}.`,
+        link: '/admin/users',
+      })
+    } catch {
+      /* best-effort */
+    }
 
     return cred.user
   }
@@ -71,10 +127,16 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  const clearSuspendedNotice = useCallback(() => {
+    setSuspendedNotice(false)
+  }, [])
+
   const value = {
     user,
     profile,
     loading,
+    suspendedNotice,
+    clearSuspendedNotice,
     register,
     login,
     logout,

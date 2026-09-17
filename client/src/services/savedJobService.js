@@ -10,6 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { isPermissionError } from '../utils/errors'
 
 export async function saveJob(uid, jobId) {
   const id = `${uid}_${jobId}`
@@ -27,33 +28,39 @@ export async function unsaveJob(uid, jobId) {
 }
 
 export async function isJobSaved(uid, jobId) {
-  // Rules may block this for non-owners — treat as "not saved"
   try {
     const id = `${uid}_${jobId}`
     const snap = await getDoc(doc(db, 'savedJobs', id))
     return snap.exists()
-  } catch {
-    return false
+  } catch (err) {
+    if (isPermissionError(err)) return false
+    throw err
   }
 }
 
 export async function listMySavedJobs(uid) {
-  const q = query(collection(db, 'savedJobs'), where('userId', '==', uid))
-  const snap = await getDocs(q)
-  const saved = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  try {
+    const q = query(collection(db, 'savedJobs'), where('userId', '==', uid))
+    const snap = await getDocs(q)
+    const saved = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 
-  if (saved.length === 0) return []
+    if (saved.length === 0) return []
 
-  const jobs = await Promise.all(
-    saved.map(async (s) => {
-      try {
-        const j = await getDoc(doc(db, 'jobs', s.jobId))
-        return j.exists() ? { id: j.id, ...j.data(), savedId: s.id } : null
-      } catch {
-        return null
-      }
-    })
-  )
+    const jobs = await Promise.all(
+      saved.map(async (s) => {
+        try {
+          const j = await getDoc(doc(db, 'jobs', s.jobId))
+          return j.exists() ? { id: j.id, ...j.data(), savedId: s.id } : null
+        } catch (err) {
+          if (isPermissionError(err)) return null
+          throw err
+        }
+      })
+    )
 
-  return jobs.filter(Boolean)
+    return jobs.filter(Boolean)
+  } catch (err) {
+    if (isPermissionError(err)) return []
+    throw err
+  }
 }

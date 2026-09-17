@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, AlertCircle } from 'lucide-react'
+import { Mail, Lock, AlertCircle, ShieldAlert, LifeBuoy } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { auth, db } from '../config/firebase'
@@ -11,63 +11,67 @@ const ROUTES = {
   job_seeker: '/dashboard/job-seeker',
 }
 
-function friendlyAuthError(code) {
-  switch (code) {
-    case 'auth/invalid-credential':
-    case 'auth/wrong-password':
-    case 'auth/user-not-found':
-      return 'Incorrect email or password. Please check and try again.'
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.'
-    case 'auth/user-disabled':
-      return 'This account has been suspended. Please contact support.'
-    case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please wait a few minutes and try again.'
-    case 'auth/network-request-failed':
-      return 'Network error. Please check your internet connection.'
-    default:
-      return 'Could not sign in. Please try again.'
-  }
-}
+// Change this one line when you get a real domain
+const SUPPORT_EMAIL = 'opeyemioluwadamilare415@gmail.com'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { login } = useAuth()
+  const {
+    login,
+    logout,
+    suspendedNotice,
+    clearSuspendedNotice,
+  } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (suspendedNotice) {
+      setError('Your account has been suspended.')
+      clearSuspendedNotice()
+    }
+  }, [suspendedNotice, clearSuspendedNotice])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
     try {
-      await login(email, password)
+      const cred = await login(email, password)
+      const uid = cred.user.uid
 
-      // Read role directly from Firestore
-      const uid = auth.currentUser?.uid
-      let role = 'job_seeker'
-      if (uid) {
-        const snap = await getDoc(doc(db, 'users', uid))
-        if (snap.exists()) {
-          const raw = (snap.data().role || 'job_seeker')
-            .toString()
-            .trim()
-            .toLowerCase()
-          role = raw
-        }
+      const snap = await getDoc(doc(db, 'users', uid))
+      if (!snap.exists()) {
+        await logout()
+        setError('Account not found. Please contact support.')
+        return
       }
 
-      // Look up known route; fall back to job seeker dashboard
+      const data = snap.data()
+
+      if (data.isSuspended === true) {
+        await logout()
+        setError('Your account has been suspended.')
+        return
+      }
+
+      const role = (data.role || 'job_seeker')
+        .toString()
+        .trim()
+        .toLowerCase()
+
       const dest = ROUTES[role] || '/dashboard/job-seeker'
       navigate(dest, { replace: true })
     } catch (err) {
-      setError(friendlyAuthError(err?.code))
+      setError(err.message || 'Failed to sign in')
     } finally {
       setSubmitting(false)
     }
   }
+
+  const suspended = error.toLowerCase().includes('suspended')
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-16 bg-gradient-to-br from-brand-50 via-white to-accent-50/40">
@@ -124,9 +128,27 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-                <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
+              <div
+                className={`flex items-start gap-2 text-sm rounded-lg p-3 ${
+                  suspended
+                    ? 'text-red-700 bg-red-50 border border-red-200'
+                    : 'text-red-600 bg-red-50 border border-red-100'
+                }`}
+              >
+                {suspended ? (
+                  <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{error}</p>
+                  {suspended && (
+                    <p className="text-xs mt-1 text-red-600/90">
+                      If you think this is a mistake, contact support and we'll
+                      review your account.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -138,6 +160,16 @@ export default function Login() {
               {submitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {suspended && (
+            <a
+              href={`mailto:${SUPPORT_EMAIL}?subject=Suspended%20SkillNest%20account%20appeal`}
+              className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg py-2.5 hover:bg-red-100 transition"
+            >
+              <LifeBuoy size={14} />
+              Contact support
+            </a>
+          )}
 
           <p className="mt-6 text-sm text-gray-500 text-center">
             Don&apos;t have an account?{' '}
