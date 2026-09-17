@@ -1,0 +1,192 @@
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  addDoc,
+  limit,
+  serverTimestamp,
+} from 'firebase/firestore'
+import { db } from '../config/firebase'
+import { createNotification, notifyAdmins } from './notificationService'
+
+const sortByCreatedDesc = (arr) =>
+  [...arr].sort((a, b) => {
+    const ta = a.createdAt?.seconds || 0
+    const tb = b.createdAt?.seconds || 0
+    return tb - ta
+  })
+
+function statusNotification(status, jobTitle, companyName) {
+  const company = companyName || 'The employer'
+  switch (status) {
+    case 'under_review':
+      return {
+        title: 'Your application is under review',
+        body: `${company} is reviewing your application for "${jobTitle}".`,
+      }
+    case 'shortlisted':
+      return {
+        title: "You've been shortlisted!",
+        body: `Great news — ${company} shortlisted you for "${jobTitle}".`,
+      }
+    case 'interview':
+      return {
+        title: 'Interview stage reached',
+        body: `You've progressed to the interview stage for "${jobTitle}" at ${company}.`,
+      }
+    case 'hired':
+      return {
+        title: "You've been hired! 🎉",
+        body: `Congratulations — ${company} hired you for "${jobTitle}".`,
+      }
+    case 'rejected':
+      return {
+        title: 'Application update',
+        body: `${company} has moved forward with other candidates for "${jobTitle}".`,
+      }
+    default:
+      return {
+        title: 'Application updated',
+        body: `Your application for "${jobTitle}" was updated to "${status}".`,
+      }
+  }
+}
+
+export async function listApplicationsForJob(jobId, employerId) {
+  const q = query(
+    collection(db, 'applications'),
+    where('jobId', '==', jobId),
+    where('employerId', '==', employerId)
+  )
+  const snap = await getDocs(q)
+  return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+}
+
+export async function listMyApplications(uid) {
+  const q = query(collection(db, 'applications'), where('applicantId', '==', uid))
+  const snap = await getDocs(q)
+  return sortByCreatedDesc(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+}
+
+export async function hasApplied(uid, jobId) {
+  try {
+    const q = query(
+      collection(db, 'applications'),
+      where('applicantId', '==', uid),
+      where('jobId', '==', jobId),
+      limit(1)
+    )
+    const snap = await getDocs(q)
+    return !snap.empty
+  } catch {
+    return false
+  }
+}
+
+export async function createApplication(uid, email, job, data) {
+  const ref = await addDoc(collection(db, 'applications'), {
+    jobId: job.id,
+    jobTitle: job.title,
+    companyName: job.companyName,
+    applicantId: uid,
+    applicantEmail: email,
+    employerId: job.ownerId,
+    companyId: job.companyId,
+    coverLetter: data.coverLetter || '',
+    resumeUrl: data.resumeUrl || '',
+    resumeName: data.resumeName || '',
+    answers: data.answers || [],
+    status: 'applied',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+
+  // Increment job applicant count
+  try {
+    const jobRef = doc(db, 'jobs', job.id)
+    const jobSnap = await getDoc(jobRef)
+    if (jobSnap.exists()) {
+      const current = jobSnap.data().applicantCount || 0
+      await updateDoc(jobRef, { applicantCount: current + 1 })
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  // Notify employer
+  try {
+    await createNotification({
+      userId: job.ownerId,
+      type: 'new_application',
+      title: 'New application received',
+      body: `${email} applied to "${job.title}".`,
+      link: `/employer/jobs/${job.id}/applicants`,
+    })
+  } catch {
+    /* best-effort */
+  }
+
+  // Notify admins
+  await notifyAdmins({
+    type: 'admin_new_application',
+    title: '📥 New application on SkillNest',
+    body: `${email} applied to "${job.title}" at ${job.companyName}.`,
+    link: '/admin/applications',
+  })
+
+  return ref.id
+}
+
+export async function updateApplicationStatus(appId, status) {
+  const ref = doc(db, 'applications', appId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const app = snap.data()
+
+  await updateDoc(ref, {
+    status,
+    updatedAt: serverTimestamp(),
+  })
+
+  // Notify candidate
+  try {
+    const { title, body } = statusNotification(status, app.jobTitle, app.companyName)
+    await createNotification({
+      userId: app.applicantId,
+      type: 'application_status',
+      title,
+      body,
+      link: '/applications',
+    })
+  } catch (err) {
+    console.warn('Candidate notification failed:', err)
+  }
+
+  // Notify admins
+  const emoji = {
+    hired: '🎉',
+    rejected: '❌',
+    shortlisted: '⭐',
+    interview: '📅',
+  }[status] || '📊'
+
+  await notifyAdmins({
+    type: 'admin_status_change',
+    title: `${emoji} Application marked as "${status.replace('_', ' ')}"`,
+    body: `${app.applicantEmail} → "${app.jobTitle}" at ${app.companyName}.`,
+    link: '/admin/applications',
+  })
+}
+
+export async function getApplicantProfile(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid))
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null
+  } catch {
+    return null
+  }
+}
