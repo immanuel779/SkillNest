@@ -9,14 +9,15 @@ import {
   GraduationCap,
   Upload,
   FileText,
-  CheckCircle2,
   AlertCircle,
   X,
   Phone,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { getProfile, updateProfile } from '../services/profileService'
 import { uploadImage, uploadDocument } from '../services/storageService'
+import { friendlyError } from '../utils/errors'
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 const JOB_TYPES = ['full_time', 'part_time', 'contract', 'internship', 'temporary']
@@ -26,10 +27,10 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 
 export default function JobSeekerProfile() {
   const { user, refreshProfile } = useAuth()
+  const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
   const [form, setForm] = useState({
@@ -65,7 +66,7 @@ export default function JobSeekerProfile() {
           setForm((f) => ({ ...f, ...data }))
         }
       } catch (err) {
-        setError(err.message)
+        setError(friendlyError(err))
       } finally {
         if (alive) setLoading(false)
       }
@@ -76,11 +77,6 @@ export default function JobSeekerProfile() {
   }, [user])
 
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }))
-
-  const flashSaved = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
 
   const handleSave = async () => {
     setError('')
@@ -107,9 +103,9 @@ export default function JobSeekerProfile() {
       }
       await updateProfile(user.uid, payload)
       await refreshProfile()
-      flashSaved()
+      toast.success('Profile saved', 'Employers will see your updates.')
     } catch (err) {
-      setError(err.message || 'Failed to save')
+      toast.error('Save failed', friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -125,9 +121,9 @@ export default function JobSeekerProfile() {
       update('photoURL', url)
       await updateProfile(user.uid, { photoURL: url })
       await refreshProfile()
-      flashSaved()
+      toast.success('Photo updated')
     } catch (err) {
-      setError(err.message)
+      toast.error('Upload failed', friendlyError(err))
     } finally {
       setUploading(false)
       if (photoInput.current) photoInput.current.value = ''
@@ -145,9 +141,9 @@ export default function JobSeekerProfile() {
       update('resumeName', file.name)
       await updateProfile(user.uid, { resumeUrl: url, resumeName: file.name })
       await refreshProfile()
-      flashSaved()
+      toast.success('Resume uploaded')
     } catch (err) {
-      setError(err.message)
+      toast.error('Upload failed', friendlyError(err))
     } finally {
       setUploading(false)
       if (resumeInput.current) resumeInput.current.value = ''
@@ -679,15 +675,7 @@ export default function JobSeekerProfile() {
 
       {/* Sticky save bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/90 backdrop-blur-md">
-        <div className="container-app py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm min-w-0">
-            {saved && (
-              <>
-                <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-                <span className="text-green-700 font-medium">Saved</span>
-              </>
-            )}
-          </div>
+        <div className="container-app py-3 flex items-center justify-end">
           <button
             onClick={handleSave}
             disabled={saving || uploading}

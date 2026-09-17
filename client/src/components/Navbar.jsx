@@ -1,5 +1,11 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu, X, Briefcase, LogOut } from 'lucide-react'
+import {
+  Menu,
+  X,
+  Briefcase,
+  LogOut,
+  Settings as SettingsIcon,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import NotificationBell from './NotificationBell'
@@ -30,6 +36,7 @@ export default function Navbar() {
 
   const publicLinks = [
     { name: 'Find Jobs', path: '/jobs' },
+    { name: 'Companies', path: '/companies' },
     { name: 'For Employers', path: '/' },
     { name: 'How It Works', path: '/' },
   ]
@@ -43,11 +50,13 @@ export default function Navbar() {
       return [
         { name: 'Company', path: '/employer/company' },
         { name: 'Jobs', path: '/employer/jobs' },
+        { name: 'Updates', path: '/employer/updates' },
         { name: 'Interviews', path: '/employer/interviews' },
       ]
     }
     return [
       { name: 'Find Jobs', path: '/jobs' },
+      { name: 'Companies', path: '/companies' },
       { name: 'Applications', path: '/applications' },
       { name: 'Saved', path: '/saved-jobs' },
       { name: 'Interviews', path: '/interviews' },
@@ -76,7 +85,6 @@ export default function Navbar() {
     >
       <div className="container-app">
         <div className="flex justify-between items-center h-16 lg:h-18 gap-3">
-          {/* Logo */}
           <Link
             to="/"
             onClick={close}
@@ -94,7 +102,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop public links (guest only) */}
           {!user && (
             <div className="hidden lg:flex items-center gap-1 mx-auto">
               {publicLinks.map((link) => (
@@ -110,7 +117,6 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Desktop right side (logged in or guest) */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3 ml-auto shrink-0">
             {user ? (
               <>
@@ -128,7 +134,6 @@ export default function Navbar() {
                   </NavLink>
                 ))}
 
-                {/* Messages link with badge */}
                 <Link
                   to="/messages"
                   className="relative text-sm font-semibold text-gray-700 hover:text-brand-700 transition-colors whitespace-nowrap"
@@ -149,7 +154,17 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                 )}
+
+                <Link
+                  to="/settings"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-600 hover:text-brand-700 hover:bg-gray-100 transition"
+                  aria-label="Settings"
+                >
+                  <SettingsIcon size={18} />
+                </Link>
+
                 <NotificationBell />
+
                 <button
                   onClick={handleLogout}
                   className="btn-outline text-sm !py-2 !px-3 whitespace-nowrap"
@@ -167,14 +182,16 @@ export default function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link to="/register" className="btn-primary text-sm whitespace-nowrap">
+                <Link
+                  to="/register"
+                  className="btn-primary text-sm whitespace-nowrap"
+                >
                   Get Started
                 </Link>
               </>
             )}
           </div>
 
-          {/* Mobile toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="lg:hidden p-2 rounded-lg text-gray-600 hover:text-brand-700 hover:bg-gray-100 transition-colors shrink-0"
@@ -185,14 +202,12 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div
         className={`lg:hidden overflow-hidden transition-all duration-300 ${
           isOpen ? 'max-h-[80vh] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="glass border-t border-white/40 px-4 pt-4 pb-6 overflow-y-auto max-h-[80vh]">
-          {/* Guest */}
           {!user && (
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-2">
@@ -218,14 +233,17 @@ export default function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link to="/register" onClick={close} className="btn-primary w-full">
+                <Link
+                  to="/register"
+                  onClick={close}
+                  className="btn-primary w-full"
+                >
                   Get Started
                 </Link>
               </div>
             </div>
           )}
 
-          {/* Logged in */}
           {user && (
             <>
               <div>
@@ -280,6 +298,13 @@ export default function Navbar() {
                       Dashboard
                     </Link>
                   )}
+                  <Link
+                    to="/settings"
+                    onClick={close}
+                    className="block px-3 py-2.5 rounded-lg text-gray-700 hover:text-brand-700 hover:bg-white/60 font-medium transition-colors"
+                  >
+                    Settings
+                  </Link>
                   <Link
                     to="/notifications"
                     onClick={close}

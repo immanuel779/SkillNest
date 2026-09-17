@@ -14,13 +14,15 @@ import {
   MessageSquare,
   AlertCircle,
   Flag,
+  BadgeCheck,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getJob } from '../services/jobService'
+import { getJob, recordJobView } from '../services/jobService'
 import { hasApplied, createApplication } from '../services/applicationService'
 import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
 import { ensureConversation } from '../services/messageService'
 import ReportModal from '../components/ReportModal'
+import { friendlyError } from '../utils/errors'
 
 export default function JobDetails() {
   const { id } = useParams()
@@ -52,6 +54,8 @@ export default function JobDetails() {
             setSaved(s)
           }
         }
+      } catch (err) {
+        console.warn('loadJob failed:', friendlyError(err))
       } finally {
         if (alive) setLoading(false)
       }
@@ -60,6 +64,12 @@ export default function JobDetails() {
       alive = false
     }
   }, [id, user, profile?.role])
+
+  // Record a view once per signed-in user per job
+  useEffect(() => {
+    if (!job || !user) return
+    recordJobView(job.id, user.uid, job.ownerId).catch(() => {})
+  }, [job, user])
 
   const toggleSave = async () => {
     if (!user || profile?.role !== 'job_seeker') return
@@ -83,7 +93,7 @@ export default function JobDetails() {
       })
       navigate(`/messages?c=${convId}`)
     } catch (err) {
-      console.error('Failed to start conversation:', err)
+      console.warn('startConversation failed:', friendlyError(err))
     }
   }
 
@@ -134,14 +144,19 @@ export default function JobDetails() {
                   {job.experienceLevel} level
                 </span>
               </div>
-              <h1 className="text-3xl font-extrabold text-gray-900">{job.title}</h1>
+              <h1 className="text-3xl font-extrabold text-gray-900">
+                {job.title}
+              </h1>
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-600">
-               <Link
-  to={`/companies/${job.companyId}`}
-  className="inline-flex items-center gap-1.5 hover:text-brand-700 transition-colors"
->
-  <Building2 size={14} /> {job.companyName}
-</Link>
+                <Link
+                  to={`/companies/${job.companyId}`}
+                  className="inline-flex items-center gap-1.5 hover:text-brand-700 transition-colors"
+                >
+                  <Building2 size={14} /> {job.companyName}
+                  {job.companyVerified && (
+                    <BadgeCheck size={13} className="text-blue-600" />
+                  )}
+                </Link>
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin size={14} /> {job.location || '—'}
                 </span>
@@ -277,7 +292,6 @@ export default function JobDetails() {
         </aside>
       </div>
 
-      {/* Report link */}
       {user && !isOwner && (
         <div className="mt-10 text-center">
           <button
@@ -328,7 +342,9 @@ function Row({ label, value }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-gray-500">{label}</dt>
-      <dd className="font-medium text-gray-800 text-right capitalize">{value}</dd>
+      <dd className="font-medium text-gray-800 text-right capitalize">
+        {value}
+      </dd>
     </div>
   )
 }
@@ -354,7 +370,7 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
       })
       onSuccess()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setSubmitting(false)
     }

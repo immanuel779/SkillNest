@@ -19,6 +19,7 @@ import EmployerJobs from './pages/EmployerJobs'
 import EmployerJobApplicants from './pages/EmployerJobApplicants'
 import EmployerScheduleInterview from './pages/EmployerScheduleInterview'
 import EmployerInterviews from './pages/EmployerInterviews'
+import EmployerUpdates from './pages/EmployerUpdates'
 import JobSeekerInterviews from './pages/JobSeekerInterviews'
 import InterviewDetails from './pages/InterviewDetails'
 import Messages from './pages/Messages'
@@ -29,10 +30,8 @@ import AdminCompanies from './pages/admin/AdminCompanies'
 import AdminJobs from './pages/admin/AdminJobs'
 import AdminApplications from './pages/admin/AdminApplications'
 import AdminReports from './pages/admin/AdminReports'
-import CompanyProfile from './pages/CompanyProfile'
 import ApplicantProfileView from './pages/ApplicantProfileView'
 import NotFound from './pages/NotFound'
-import { useInterviewReminders } from './hooks/useInterviewReminders'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Pricing from './pages/Pricing'
@@ -43,6 +42,12 @@ import HelpCenter from './pages/HelpCenter'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import Security from './pages/Security'
+import CompanySpace from './pages/CompanySpace'
+import CompanyLegacyRedirect from './pages/CompanyLegacyRedirect'
+import { useInterviewReminders } from './hooks/useInterviewReminders'
+import AccountSettings from './pages/AccountSettings'
+import Companies from './pages/Companies'
+import EmployerAnalytics from './pages/EmployerAnalytics'
 
 function App() {
   useInterviewReminders()
@@ -57,18 +62,40 @@ function App() {
 
         <Route path="jobs" element={<FindJobs />} />
         <Route path="jobs/:id" element={<JobDetails />} />
-        <Route path="companies/:id" element={<CompanyProfile />} />
+        <Route path="companies" element={<Companies />} />
+        <Route
+  path="employer/analytics"
+  element={
+    <ProtectedRoute allowRoles={['employer']}>
+      <EmployerAnalytics />
+    </ProtectedRoute>
+  }
+/>
+
+        {/* Public company space */}
+        <Route path="c/:slug" element={<CompanySpace />} />
+        {/* Legacy /companies/:id → redirects to /c/:slug */}
+        <Route path="companies/:id" element={<CompanyLegacyRedirect />} />
+        <Route
+  path="settings"
+  element={
+    <ProtectedRoute>
+      <AccountSettings />
+    </ProtectedRoute>
+  }
+/>
+
         {/* Static pages */}
-<Route path="about" element={<About />} />
-<Route path="contact" element={<Contact />} />
-<Route path="pricing" element={<Pricing />} />
-<Route path="how-it-works" element={<HowItWorks />} />
-<Route path="careers" element={<Careers />} />
-<Route path="blog" element={<Blog />} />
-<Route path="help" element={<HelpCenter />} />
-<Route path="privacy" element={<Privacy />} />
-<Route path="terms" element={<Terms />} />
-<Route path="security" element={<Security />} />
+        <Route path="about" element={<About />} />
+        <Route path="contact" element={<Contact />} />
+        <Route path="pricing" element={<Pricing />} />
+        <Route path="how-it-works" element={<HowItWorks />} />
+        <Route path="careers" element={<Careers />} />
+        <Route path="blog" element={<Blog />} />
+        <Route path="help" element={<HelpCenter />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="terms" element={<Terms />} />
+        <Route path="security" element={<Security />} />
 
         {/* Job seeker */}
         <Route
@@ -177,8 +204,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="employer/updates"
+          element={
+            <ProtectedRoute allowRoles={['employer']}>
+              <EmployerUpdates />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Applicant profile view (employer + admin) */}
+        {/* Applicant profile view */}
         <Route
           path="applicants/:uid"
           element={
@@ -214,7 +249,7 @@ function App() {
           }
         />
 
-        {/* Legacy redirect */}
+        {/* Legacy admin redirect */}
         <Route
           path="dashboard/admin"
           element={<Navigate to="/admin" replace />}

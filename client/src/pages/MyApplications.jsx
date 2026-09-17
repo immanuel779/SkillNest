@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Briefcase, Building2, Calendar, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { listMyApplications } from '../services/applicationService'
+import { SkeletonList } from '../components/Skeletons'
+import { friendlyError } from '../utils/errors'
 
 const STAGES = [
   { v: 'all', l: 'All' },
@@ -45,7 +47,7 @@ export default function MyApplications() {
         const list = await listMyApplications(user.uid)
         if (alive) setApps(list)
       } catch (err) {
-        if (alive) setError(err.message)
+        if (alive) setError(friendlyError(err))
       } finally {
         if (alive) setLoading(false)
       }
@@ -57,54 +59,61 @@ export default function MyApplications() {
 
   const filtered = filter === 'all' ? apps : apps.filter((a) => a.status === filter)
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
   return (
     <div className="container-app py-10">
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold">My Applications</h1>
-        <p className="text-gray-500 mt-1">Track every application you've sent.</p>
+        <p className="text-gray-500 mt-1">
+          {loading ? 'Loading...' : `Track every application you've sent.`}
+        </p>
       </div>
 
       {error && (
         <div className="mb-6 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-          <AlertCircle size={16} className="mt-0.5" />
-          <span>{error}</span>
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{error}</span>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {STAGES.map((s) => {
-          const count = s.v === 'all' ? apps.length : apps.filter((a) => a.status === s.v).length
-          const active = filter === s.v
-          return (
-            <button
-              key={s.v}
-              onClick={() => setFilter(s.v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
-                active
-                  ? 'bg-brand-700 text-white border-brand-700'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300'
-              }`}
-            >
-              {s.l} <span className="opacity-70">({count})</span>
-            </button>
-          )
-        })}
-      </div>
+      {!loading && apps.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {STAGES.map((s) => {
+            const count =
+              s.v === 'all'
+                ? apps.length
+                : apps.filter((a) => a.status === s.v).length
+            const active = filter === s.v
+            return (
+              <button
+                key={s.v}
+                onClick={() => setFilter(s.v)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                  active
+                    ? 'bg-brand-700 text-white border-brand-700'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300'
+                }`}
+              >
+                {s.l} <span className="opacity-70">({count})</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <SkeletonList count={3} />
+      ) : filtered.length === 0 ? (
         <div className="card text-center py-16">
           <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-semibold text-gray-700">No applications here</p>
+          <p className="font-semibold text-gray-700">
+            {apps.length === 0
+              ? 'No applications yet'
+              : 'No applications in this stage'}
+          </p>
           <p className="text-sm text-gray-500 mt-1 mb-6">
-            Browse jobs and apply to get started.
+            {apps.length === 0
+              ? 'Browse jobs and apply to get started.'
+              : 'Try a different filter.'}
           </p>
           <Link to="/jobs" className="btn-primary inline-flex">
             Find Jobs
@@ -117,7 +126,9 @@ export default function MyApplications() {
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900">{a.jobTitle}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {a.jobTitle}
+                    </h3>
                     <StatusBadge status={a.status} />
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
@@ -128,7 +139,9 @@ export default function MyApplications() {
                       <span className="inline-flex items-center gap-1">
                         <Calendar size={12} />
                         Applied{' '}
-                        {new Date(a.createdAt.seconds * 1000).toLocaleDateString()}
+                        {new Date(
+                          a.createdAt.seconds * 1000
+                        ).toLocaleDateString()}
                       </span>
                     )}
                   </div>

@@ -10,6 +10,7 @@ import {
   orderBy,
   serverTimestamp,
   limit,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { createNotification } from './notificationService'
@@ -18,15 +19,21 @@ import { createNotification } from './notificationService'
 // STATS
 // =========================
 export async function getPlatformStats() {
-  const [usersSnap, employersSnap, jobsSnap, appsSnap, interviewsSnap, reportsSnap] =
-    await Promise.all([
-      getDocs(collection(db, 'users')),
-      getDocs(query(collection(db, 'users'), where('role', '==', 'employer'))),
-      getDocs(query(collection(db, 'jobs'), where('status', '==', 'published'))),
-      getDocs(collection(db, 'applications')),
-      getDocs(collection(db, 'interviews')),
-      getDocs(query(collection(db, 'reports'), where('status', '==', 'open'))),
-    ])
+  const [
+    usersSnap,
+    employersSnap,
+    jobsSnap,
+    appsSnap,
+    interviewsSnap,
+    reportsSnap,
+  ] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(query(collection(db, 'users'), where('role', '==', 'employer'))),
+    getDocs(query(collection(db, 'jobs'), where('status', '==', 'published'))),
+    getDocs(collection(db, 'applications')),
+    getDocs(collection(db, 'interviews')),
+    getDocs(query(collection(db, 'reports'), where('status', '==', 'open'))),
+  ])
 
   const apps = appsSnap.docs.map((d) => d.data())
   const hires = apps.filter((a) => a.status === 'hired').length
@@ -79,6 +86,38 @@ export async function setUserSuspended(uid, suspended, reason = '') {
 export async function listAllCompanies() {
   const snap = await getDocs(collection(db, 'companies'))
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+/**
+ * Toggle a company's verified status.
+ * Also updates companyVerified on every job belonging to that company
+ * so job cards can show the badge without extra lookups.
+ */
+export async function setCompanyVerified(companyId, verified) {
+  await updateDoc(doc(db, 'companies', companyId), {
+    verified: !!verified,
+    verifiedAt: verified ? serverTimestamp() : null,
+    updatedAt: serverTimestamp(),
+  })
+
+  try {
+    const jobsSnap = await getDocs(
+      query(collection(db, 'jobs'), where('companyId', '==', companyId))
+    )
+    if (jobsSnap.empty) return
+
+    const docs = jobsSnap.docs
+    for (let i = 0; i < docs.length; i += 500) {
+      const chunk = docs.slice(i, i + 500)
+      const batch = writeBatch(db)
+      chunk.forEach((d) => {
+        batch.update(d.ref, { companyVerified: !!verified })
+      })
+      await batch.commit()
+    }
+  } catch (err) {
+    console.warn('Could not sync verified flag to jobs:', err)
+  }
 }
 
 // =========================

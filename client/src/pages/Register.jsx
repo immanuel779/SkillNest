@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, Briefcase, Search, AlertCircle } from 'lucide-react'
+import {
+  Mail,
+  Lock,
+  User,
+  Briefcase,
+  Search,
+  AlertCircle,
+} from 'lucide-react'
+import { friendlyError } from '../utils/errors'
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -25,15 +33,26 @@ export default function Register() {
       await register(form)
       navigate(`/dashboard/${form.role.replace('_', '-')}`)
     } catch (err) {
-      setError(err.message || 'Failed to create account')
+      // Never show raw Firebase errors to users
+      setError(friendlyError(err))
     } finally {
       setSubmitting(false)
     }
   }
 
   const roles = [
-    { id: 'job_seeker', label: 'Job Seeker', desc: 'Find and apply to jobs', icon: Search },
-    { id: 'employer', label: 'Employer', desc: 'Post jobs and hire talent', icon: Briefcase },
+    {
+      id: 'job_seeker',
+      label: 'Job Seeker',
+      desc: 'Find and apply to jobs',
+      icon: Search,
+    },
+    {
+      id: 'employer',
+      label: 'Employer',
+      desc: 'Post jobs and hire talent',
+      icon: Briefcase,
+    },
   ]
 
   return (
@@ -41,13 +60,18 @@ export default function Register() {
       <div className="w-full max-w-lg">
         <div className="card">
           <h1 className="text-2xl font-extrabold">Create your account</h1>
-          <p className="text-sm text-gray-500 mt-1">Join SkillNest in less than a minute.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Join SkillNest in less than a minute.
+          </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label className="label">Full name</label>
               <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <User
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <input
                   value={form.fullName}
                   onChange={(e) => update('fullName', e.target.value)}
@@ -61,7 +85,10 @@ export default function Register() {
             <div>
               <label className="label">Email</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Mail
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="email"
                   value={form.email}
@@ -76,7 +103,10 @@ export default function Register() {
             <div>
               <label className="label">Password</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Lock
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="password"
                   value={form.password}
@@ -114,8 +144,12 @@ export default function Register() {
                       >
                         <r.icon size={16} />
                       </div>
-                      <div className="font-semibold text-gray-900">{r.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{r.desc}</div>
+                      <div className="font-semibold text-gray-900">
+                        {r.label}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {r.desc}
+                      </div>
                     </button>
                   )
                 })}
@@ -129,14 +163,21 @@ export default function Register() {
               </div>
             )}
 
-            <button type="submit" disabled={submitting} className="btn-primary w-full">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary w-full"
+            >
               {submitting ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
           <p className="mt-6 text-sm text-gray-500 text-center">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-700 hover:text-brand-800">
+            <Link
+              to="/login"
+              className="font-semibold text-brand-700 hover:text-brand-800"
+            >
               Sign In
             </Link>
           </p>

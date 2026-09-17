@@ -1,6 +1,6 @@
 /**
  * Turn any error into a user-friendly message.
- * Falls back to the original message if we don't recognize it.
+ * Never exposes raw Firebase / Firestore error text to users.
  *
  * Use: setError(friendlyError(err))
  */
@@ -126,9 +126,11 @@ export function friendlyError(err) {
   }
 
   // ===========================
-  // Fallback
+  // Fallback — never expose raw error text to users.
+  // Log the real one to the console so developers can debug.
   // ===========================
-  return err.message || 'Something went wrong. Please try again.'
+  console.warn('Unhandled error:', err)
+  return 'Something went wrong. Please try again.'
 }
 
 /**

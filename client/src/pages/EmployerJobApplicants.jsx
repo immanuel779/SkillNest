@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { getJob } from '../services/jobService'
 import {
   listApplicationsForJob,
@@ -21,6 +22,7 @@ import {
 import { ensureConversation } from '../services/messageService'
 import { openWhatsApp } from '../utils/whatsapp'
 import { friendlyError } from '../utils/errors'
+import { SkeletonList } from '../components/Skeletons'
 
 const PIPELINE = [
   { v: 'all', l: 'All' },
@@ -51,6 +53,7 @@ function AppStatus({ status }) {
 export default function EmployerJobApplicants() {
   const { id: jobId } = useParams()
   const { user } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
 
   const [job, setJob] = useState(null)
@@ -66,7 +69,7 @@ export default function EmployerJobApplicants() {
     try {
       const j = await getJob(jobId)
       if (!j || j.ownerId !== user.uid) {
-        setError('This job doesn\'t belong to your account.')
+        setError("This job doesn't belong to your account.")
         return
       }
       setJob(j)
@@ -101,9 +104,13 @@ export default function EmployerJobApplicants() {
     setBusyId(app.id)
     try {
       await updateApplicationStatus(app.id, status)
+      toast.success(
+        `Marked as ${status.replace('_', ' ')}`,
+        'The candidate has been notified.'
+      )
       await load()
     } catch (err) {
-      setError(friendlyError(err))
+      toast.error('Could not update', friendlyError(err))
     } finally {
       setBusyId(null)
     }
@@ -124,8 +131,7 @@ export default function EmployerJobApplicants() {
       })
       navigate(`/messages?c=${convId}`)
     } catch (err) {
-      console.error('Failed to start conversation:', err)
-      setError(friendlyError(err))
+      toast.error('Could not open conversation', friendlyError(err))
     } finally {
       setBusyId(null)
     }
@@ -154,8 +160,12 @@ export default function EmployerJobApplicants() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      <div className="container-app py-10">
+        <div className="mb-6">
+          <div className="h-8 w-48 animate-pulse rounded-md bg-gray-200 mb-2" />
+          <div className="h-4 w-32 animate-pulse rounded-md bg-gray-200" />
+        </div>
+        <SkeletonList count={3} />
       </div>
     )
   }

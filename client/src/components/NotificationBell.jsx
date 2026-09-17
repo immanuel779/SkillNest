@@ -17,11 +17,13 @@ const ICONS = {
   admin_status_change: '📊',
   admin_new_job: '💼',
   admin_new_user: '👤',
+  new_job: '🔔',
+  company_update: '📣',
   system: '🔔',
 }
 
 export default function NotificationBell() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [open, setOpen] = useState(false)
@@ -29,9 +31,33 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!user) return
-    const unsub = subscribeNotifications(user.uid, setItems)
+
+    const unsub = subscribeNotifications(user.uid, (list) => {
+      const prefs = profile || {}
+      const filtered = list.filter((n) => {
+        // Admin events are always visible to admins
+        if (n.type?.startsWith('admin_')) return true
+
+        if (
+          n.type === 'application_status' &&
+          prefs.notifyApplications === false
+        )
+          return false
+        if (n.type === 'message' && prefs.notifyMessages === false) return false
+        if (n.type === 'interview' && prefs.notifyInterviews === false)
+          return false
+        if (
+          (n.type === 'new_job' || n.type === 'company_update') &&
+          prefs.notifyCompanyUpdates === false
+        )
+          return false
+
+        return true
+      })
+      setItems(filtered)
+    })
     return unsub
-  }, [user])
+  }, [user, profile])
 
   useEffect(() => {
     const onClick = (e) => {
@@ -98,7 +124,9 @@ export default function NotificationBell() {
                     !n.isRead ? 'bg-brand-50/40' : ''
                   }`}
                 >
-                  <div className="text-xl shrink-0">{ICONS[n.type] || '🔔'}</div>
+                  <div className="text-xl shrink-0">
+                    {ICONS[n.type] || '🔔'}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2">
                       <p

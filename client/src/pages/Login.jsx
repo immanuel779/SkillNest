@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, AlertCircle, ShieldAlert, LifeBuoy } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
-import { auth, db } from '../config/firebase'
+import { db } from '../config/firebase'
+import { friendlyError } from '../utils/errors'
 
 const ROUTES = {
   admin: '/admin',
@@ -11,7 +12,6 @@ const ROUTES = {
   job_seeker: '/dashboard/job-seeker',
 }
 
-// Change this one line when you get a real domain
 const SUPPORT_EMAIL = 'opeyemioluwadamilare415@gmail.com'
 
 export default function Login() {
@@ -19,12 +19,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const {
-    login,
-    logout,
-    suspendedNotice,
-    clearSuspendedNotice,
-  } = useAuth()
+  const { login, logout, suspendedNotice, clearSuspendedNotice } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -57,15 +52,12 @@ export default function Login() {
         return
       }
 
-      const role = (data.role || 'job_seeker')
-        .toString()
-        .trim()
-        .toLowerCase()
-
+      const role = (data.role || 'job_seeker').toString().trim().toLowerCase()
       const dest = ROUTES[role] || '/dashboard/job-seeker'
       navigate(dest, { replace: true })
     } catch (err) {
-      setError(err.message || 'Failed to sign in')
+      // Never show raw Firebase errors to users
+      setError(friendlyError(err))
     } finally {
       setSubmitting(false)
     }

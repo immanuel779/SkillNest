@@ -68,7 +68,12 @@ export async function ensureConversation({
   return id
 }
 
-export async function sendMessage({ conversationId: convId, senderId, recipientId, body }) {
+export async function sendMessage({
+  conversationId: convId,
+  senderId,
+  recipientId,
+  body,
+}) {
   if (!body.trim()) return
   const ref = await addDoc(collection(db, 'messages'), {
     conversationId: convId,
@@ -170,5 +175,27 @@ export function subscribeUnreadMessageCount(uid, callback) {
   return onSnapshot(q, (snap) => {
     const unread = snap.docs.filter((d) => !d.data().isRead).length
     callback(unread)
+  })
+}
+
+/**
+ * Subscribe to unread messages grouped by conversation.
+ * Calls `callback` with a map: { [conversationId]: unreadCount }
+ */
+export function subscribeUnreadByConversation(uid, callback) {
+  const q = query(
+    collection(db, 'messages'),
+    where('recipientId', '==', uid),
+    where('isRead', '==', false)
+  )
+  return onSnapshot(q, (snap) => {
+    const map = {}
+    snap.docs.forEach((d) => {
+      const m = d.data()
+      const cid = m.conversationId
+      if (!cid) return
+      map[cid] = (map[cid] || 0) + 1
+    })
+    callback(map)
   })
 }

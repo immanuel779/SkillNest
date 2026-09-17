@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, MapPin, Briefcase, TrendingUp, Users, ShieldCheck,
   MessageSquare, CalendarCheck, ArrowRight, Sparkles, Building2,
-  Star, CheckCircle2, Zap,
+  Star, CheckCircle2, Zap, BadgeCheck,
 } from 'lucide-react'
+import { listFeaturedCompanies } from '../services/companyService'
+import { listPublishedJobs } from '../services/jobService'
 
 const featuredJobs = [
   {
@@ -45,20 +48,50 @@ const whyFeatures = [
 ]
 
 export default function Landing() {
+  const [featured, setFeatured] = useState([])
+  const [companyJobCounts, setCompanyJobCounts] = useState({})
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const [companies, jobs] = await Promise.all([
+          listFeaturedCompanies(6),
+          listPublishedJobs(200),
+        ])
+        if (!alive) return
+        setFeatured(companies)
+
+        const counts = {}
+        jobs.forEach((j) => {
+          counts[j.companyId] = (counts[j.companyId] || 0) + 1
+        })
+        setCompanyJobCounts(counts)
+      } catch {
+        /* silent */
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
+
   return (
     <div className="overflow-hidden">
       {/* ============================
           HERO
           ============================ */}
       <section className="relative isolate">
-        {/* Background gradient + orbs */}
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-50 via-white to-accent-50/50" />
         <div className="absolute top-10 left-[10%] w-72 h-72 md:w-96 md:h-96 bg-brand-400/25 rounded-full blur-3xl -z-10 animate-float" />
         <div
           className="absolute bottom-0 right-[5%] w-72 h-72 md:w-96 md:h-96 bg-accent-400/20 rounded-full blur-3xl -z-10 animate-float-slow"
           style={{ animationDelay: '1.5s' }}
         />
-        <div className="absolute top-1/3 left-1/2 w-64 h-64 bg-brand-300/20 rounded-full blur-3xl -z-10 animate-float" style={{ animationDelay: '3s' }} />
+        <div
+          className="absolute top-1/3 left-1/2 w-64 h-64 bg-brand-300/20 rounded-full blur-3xl -z-10 animate-float"
+          style={{ animationDelay: '3s' }}
+        />
 
         <div className="container-app pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-4xl mx-auto text-center">
@@ -99,7 +132,6 @@ export default function Landing() {
               </Link>
             </div>
 
-            {/* Search-style hint card */}
             <div
               className="mt-12 max-w-3xl mx-auto glass rounded-2xl p-2 shadow-xl shadow-brand-900/5 reveal-in"
               style={{ animationDelay: '0.5s' }}
@@ -127,7 +159,6 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Stats */}
             <div
               className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto reveal"
               style={{ animationDelay: '0.6s' }}
@@ -170,7 +201,6 @@ export default function Landing() {
         </div>
 
         <div className="mt-16 grid md:grid-cols-2 gap-8">
-          {/* Job Seeker */}
           <div className="card card-hover relative overflow-hidden group">
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-brand-400/15 rounded-full blur-2xl group-hover:bg-brand-400/25 transition-colors duration-500" />
             <div className="relative">
@@ -205,7 +235,6 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Employer */}
           <div className="card card-hover relative overflow-hidden group">
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-accent-400/15 rounded-full blur-2xl group-hover:bg-accent-400/25 transition-colors duration-500" />
             <div className="relative">
@@ -243,6 +272,102 @@ export default function Landing() {
       </section>
 
       {/* ============================
+          FEATURED COMPANIES
+          ============================ */}
+      {featured.length > 0 && (
+        <section className="relative py-20 md:py-24 bg-white">
+          <div className="container-app">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+              <div>
+                <span className="badge bg-brand-50 text-brand-700 border border-brand-100">
+                  Featured Companies
+                </span>
+                <h2 className="mt-4 text-3xl md:text-4xl lg:text-5xl font-extrabold text-balance max-w-xl">
+                  Meet the teams <span className="gradient-text">hiring now</span>
+                </h2>
+                <p className="mt-4 text-gray-600 text-lg max-w-lg">
+                  Follow companies you love. Get notified the moment they post a new role.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featured.map((c, i) => {
+                const jobCount = companyJobCounts[c.id] || 0
+                return (
+                  <Link
+                    key={c.id}
+                    to={`/c/${c.slug}`}
+                    className="card card-hover block group relative overflow-hidden reveal"
+                    style={{ animationDelay: `${0.05 + i * 0.06}s` }}
+                  >
+                    <div className="absolute -top-16 -right-16 w-40 h-40 bg-brand-300/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-brand-gradient flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-brand-500/20">
+                        {c.logoUrl ? (
+                          <img
+                            src={c.logoUrl}
+                            alt={c.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Building2 size={24} className="text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-bold text-gray-900 group-hover:text-brand-700 transition-colors truncate">
+                            {c.name}
+                          </h3>
+                          {c.verified && (
+                            <BadgeCheck size={14} className="text-blue-600 shrink-0" />
+                          )}
+                          {jobCount >= 3 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-100 rounded-full px-1.5 py-0.5">
+                              <Zap size={9} /> Hiring
+                            </span>
+                          )}
+                        </div>
+                        {c.industry && (
+                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                            {c.industry}
+                          </p>
+                        )}
+                        {c.tagline && (
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                            {c.tagline}
+                          </p>
+                        )}
+                        <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+                          <span>
+                            <strong className="text-gray-900">{jobCount}</strong>{' '}
+                            open {jobCount === 1 ? 'role' : 'roles'}
+                          </span>
+                          <span>
+                            <strong className="text-gray-900">
+                              {c.followerCount || 0}
+                            </strong>{' '}
+                            followers
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+
+            <div className="mt-10 text-center">
+              <Link to="/companies" className="btn-outline">
+                Browse all companies
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ============================
           FEATURED JOBS
           ============================ */}
       <section className="relative py-20 md:py-28 bg-gradient-to-b from-white via-brand-50/40 to-white">
@@ -257,7 +382,7 @@ export default function Landing() {
               </h2>
             </div>
             <Link
-              to="/register"
+              to="/jobs"
               className="btn-ghost self-start sm:self-end group"
             >
               View all jobs
@@ -269,11 +394,10 @@ export default function Landing() {
             {featuredJobs.map((job, i) => (
               <Link
                 key={job.title}
-                to="/register"
+                to="/jobs"
                 className="card card-hover group block relative overflow-hidden reveal"
                 style={{ animationDelay: `${0.1 + i * 0.1}s` }}
               >
-                {/* glow on hover */}
                 <div
                   className={`absolute -top-20 -right-20 w-48 h-48 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
                     job.accent === 'brand' ? 'bg-brand-400/25' : 'bg-accent-400/25'
@@ -320,7 +444,7 @@ export default function Landing() {
                   <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
                     <span className="text-sm font-bold text-gray-900">{job.salary}</span>
                     <span className="text-xs font-semibold text-brand-600 group-hover:text-accent-600 transition-colors inline-flex items-center gap-1">
-                      Apply now
+                      Browse
                       <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </span>
                   </div>
@@ -369,7 +493,6 @@ export default function Landing() {
           ============================ */}
       <section className="container-app pb-20 md:pb-28">
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Job seeker CTA */}
           <div className="relative overflow-hidden rounded-3xl bg-brand-gradient p-10 md:p-12 text-white shadow-2xl shadow-brand-900/20">
             <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
             <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-accent-400/20 rounded-full blur-3xl" />
@@ -402,7 +525,6 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Employer CTA */}
           <div className="relative overflow-hidden rounded-3xl bg-gray-900 p-10 md:p-12 text-white shadow-2xl shadow-gray-900/30">
             <div className="absolute -top-24 -right-24 w-72 h-72 bg-accent-500/25 rounded-full blur-3xl" />
             <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-brand-500/25 rounded-full blur-3xl" />

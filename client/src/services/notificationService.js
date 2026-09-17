@@ -60,6 +60,48 @@ export async function notifyAdmins({ type, title, body = '', link = '' }) {
   }
 }
 
+/**
+ * Send a notification to every follower of a company.
+ * Batches writes in chunks of 500 to stay under Firestore limits.
+ * Silently caps at 5000 followers per event to prevent runaway cost.
+ */
+export async function notifyCompanyFollowers(
+  companyId,
+  { type, title, body = '', link = '' }
+) {
+  if (!companyId) return
+  try {
+    const q = query(
+      collection(db, 'companyFollowers'),
+      where('companyId', '==', companyId)
+    )
+    const snap = await getDocs(q)
+    if (snap.empty) return
+
+    const followers = snap.docs.slice(0, 5000).map((d) => d.data())
+
+    for (let i = 0; i < followers.length; i += 500) {
+      const chunk = followers.slice(i, i + 500)
+      const batch = writeBatch(db)
+      chunk.forEach((f) => {
+        const ref = doc(collection(db, 'notifications'))
+        batch.set(ref, {
+          userId: f.userId,
+          type,
+          title,
+          body,
+          link,
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      })
+      await batch.commit()
+    }
+  } catch (err) {
+    console.warn('notifyCompanyFollowers failed:', err)
+  }
+}
+
 export async function listMyNotifications(uid) {
   const q = query(collection(db, 'notifications'), where('userId', '==', uid))
   const snap = await getDocs(q)

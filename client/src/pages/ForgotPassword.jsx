@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react'
+import {
+  Mail,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+  ShieldAlert,
+} from 'lucide-react'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '../config/firebase'
+import { friendlyError } from '../utils/errors'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -21,16 +28,11 @@ export default function ForgotPassword() {
       })
       setSent(true)
     } catch (err) {
-      // Show a friendly message for known errors
+      // Don't reveal whether an email exists — this is intentional
       if (err.code === 'auth/user-not-found') {
-        // Don't reveal whether the email exists — show success for security
         setSent(true)
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.')
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many attempts. Please wait a few minutes and try again.')
       } else {
-        setError(err.message || 'Could not send reset email. Please try again.')
+        setError(friendlyError(err))
       }
     } finally {
       setSubmitting(false)
@@ -56,8 +58,8 @@ export default function ForgotPassword() {
               <h1 className="text-2xl font-extrabold">Check your inbox</h1>
               <p className="text-sm text-gray-500 mt-2 leading-relaxed">
                 If an account exists for <strong>{email}</strong>, we've sent a
-                password reset link. Click the link in the email to choose a new
-                password.
+                password reset link. Click the link in the email to choose a
+                new password.
               </p>
               <p className="text-xs text-gray-400 mt-4">
                 Didn't get the email? Check your spam folder, or{' '}
@@ -75,9 +77,12 @@ export default function ForgotPassword() {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-extrabold">Forgot your password?</h1>
+              <h1 className="text-2xl font-extrabold">
+                Forgot your password?
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Enter the email you signed up with and we'll send you a reset link.
+                Enter the email you signed up with and we'll send you a reset
+                link.
               </p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">

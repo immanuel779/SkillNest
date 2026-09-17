@@ -1,34 +1,58 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Building2, ExternalLink, MapPin } from 'lucide-react'
-import { listAllCompanies } from '../../services/adminService'
+import {
+  Search,
+  Building2,
+  ExternalLink,
+  MapPin,
+  BadgeCheck,
+  BadgeX,
+} from 'lucide-react'
+import {
+  listAllCompanies,
+  setCompanyVerified,
+} from '../../services/adminService'
 
 export default function AdminCompanies() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
+  const [busyId, setBusyId] = useState(null)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const list = await listAllCompanies()
+      setItems(list)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let alive = true
-    ;(async () => {
-      try {
-        const list = await listAllCompanies()
-        if (alive) setItems(list)
-      } finally {
-        if (alive) setLoading(false)
-      }
-    })()
-    return () => {
-      alive = false
-    }
+    load()
   }, [])
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
     if (!needle) return items
     return items.filter((c) =>
-      [c.name, c.industry, c.location].filter(Boolean).join(' ').toLowerCase().includes(needle)
+      [c.name, c.industry, c.location]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(needle)
     )
   }, [items, q])
+
+  const toggleVerified = async (company) => {
+    setBusyId(company.id)
+    try {
+      await setCompanyVerified(company.id, !company.verified)
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -62,17 +86,28 @@ export default function AdminCompanies() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((c) => (
-            <div key={c.id} className="card">
+            <div key={c.id} className="card flex flex-col">
               <div className="flex items-start gap-3">
                 <div className="w-12 h-12 rounded-xl bg-brand-gradient flex items-center justify-center text-white shrink-0 overflow-hidden">
                   {c.logoUrl ? (
-                    <img src={c.logoUrl} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={c.logoUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <Building2 size={20} />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 truncate">{c.name}</h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="font-bold text-gray-900 truncate">
+                      {c.name}
+                    </h3>
+                    {c.verified && (
+                      <BadgeCheck size={16} className="text-blue-600 shrink-0" />
+                    )}
+                  </div>
                   {c.industry && (
                     <p className="text-xs text-gray-500 mt-0.5">{c.industry}</p>
                   )}
@@ -85,7 +120,9 @@ export default function AdminCompanies() {
               </div>
 
               {c.description && (
-                <p className="text-sm text-gray-600 mt-3 line-clamp-3">{c.description}</p>
+                <p className="text-sm text-gray-600 mt-3 line-clamp-3">
+                  {c.description}
+                </p>
               )}
 
               {c.website && (
@@ -99,6 +136,28 @@ export default function AdminCompanies() {
                   <ExternalLink size={11} />
                 </a>
               )}
+
+              <button
+                onClick={() => toggleVerified(c)}
+                disabled={busyId === c.id}
+                className={`text-xs font-semibold mt-3 inline-flex items-center gap-1 transition disabled:opacity-50 ${
+                  c.verified
+                    ? 'text-red-600 hover:text-red-700'
+                    : 'text-blue-600 hover:text-blue-700'
+                }`}
+              >
+                {c.verified ? (
+                  <>
+                    <BadgeX size={12} />
+                    {busyId === c.id ? 'Removing...' : 'Remove verification'}
+                  </>
+                ) : (
+                  <>
+                    <BadgeCheck size={12} />
+                    {busyId === c.id ? 'Verifying...' : 'Verify company'}
+                  </>
+                )}
+              </button>
             </div>
           ))}
         </div>

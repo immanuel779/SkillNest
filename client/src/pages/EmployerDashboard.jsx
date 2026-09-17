@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   Trophy,
   Plus,
+  TrendingUp,
 } from 'lucide-react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
@@ -87,9 +88,14 @@ export default function EmployerDashboard() {
             Welcome, {profile?.fullName || user?.email}.
           </p>
         </div>
-        <Link to="/employer/jobs/new" className="btn-primary">
-          <Plus size={16} /> Post a job
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link to="/employer/analytics" className="btn-outline">
+            <TrendingUp size={16} /> View analytics
+          </Link>
+          <Link to="/employer/jobs/new" className="btn-primary">
+            <Plus size={16} /> Post a job
+          </Link>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -113,14 +119,22 @@ export default function EmployerDashboard() {
       </div>
 
       <div className="mt-10 card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-lg font-bold">Recent jobs</h2>
-          <Link
-            to="/employer/jobs"
-            className="text-sm text-brand-700 font-semibold hover:underline"
-          >
-            View all
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/employer/analytics"
+              className="text-sm font-semibold text-accent-600 hover:underline inline-flex items-center gap-1"
+            >
+              <TrendingUp size={14} /> Analytics
+            </Link>
+            <Link
+              to="/employer/jobs"
+              className="text-sm text-brand-700 font-semibold hover:underline"
+            >
+              View all
+            </Link>
+          </div>
         </div>
         {recentJobs.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
@@ -137,10 +151,13 @@ export default function EmployerDashboard() {
                 <div>
                   <div className="font-semibold text-gray-900">{j.title}</div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {j.status} · {j.applicantCount || 0} applicants
+                    {j.status} · {j.applicantCount || 0} applicants ·{' '}
+                    {j.views || 0} views
                   </div>
                 </div>
-                <span className="text-xs text-brand-700 font-semibold">View →</span>
+                <span className="text-xs text-brand-700 font-semibold">
+                  View →
+                </span>
               </Link>
             ))}
           </div>

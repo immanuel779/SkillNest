@@ -8,10 +8,14 @@ import {
   X,
   Bookmark,
   BookmarkCheck,
+  BadgeCheck,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { listPublishedJobs } from '../services/jobService'
 import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
+import { SkeletonList } from '../components/Skeletons'
+import { friendlyError } from '../utils/errors'
 
 const JOB_TYPES = [
   { v: '', l: 'All types' },
@@ -52,6 +56,7 @@ const CATEGORIES = [
 
 export default function FindJobs() {
   const { user } = useAuth()
+  const toast = useToast()
   const [jobs, setJobs] = useState([])
   const [savedMap, setSavedMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -104,7 +109,10 @@ export default function FindJobs() {
           .toLowerCase()
         if (!hay.includes(needle)) return false
       }
-      if (location && !(j.location || '').toLowerCase().includes(location.toLowerCase()))
+      if (
+        location &&
+        !(j.location || '').toLowerCase().includes(location.toLowerCase())
+      )
         return false
       if (jobType && j.jobType !== jobType) return false
       if (workMode && j.workMode !== workMode) return false
@@ -117,14 +125,23 @@ export default function FindJobs() {
   const toggleSave = async (e, job) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!user) return
-    const currentlySaved = savedMap[job.id]
-    if (currentlySaved) {
-      await unsaveJob(user.uid, job.id)
-    } else {
-      await saveJob(user.uid, job.id)
+    if (!user) {
+      toast.info('Sign in to save jobs')
+      return
     }
-    setSavedMap((m) => ({ ...m, [job.id]: !currentlySaved }))
+    const currentlySaved = savedMap[job.id]
+    try {
+      if (currentlySaved) {
+        await unsaveJob(user.uid, job.id)
+        toast.success('Removed from saved')
+      } else {
+        await saveJob(user.uid, job.id)
+        toast.success('Saved for later')
+      }
+      setSavedMap((m) => ({ ...m, [job.id]: !currentlySaved }))
+    } catch (err) {
+      toast.error('Could not save job', friendlyError(err))
+    }
   }
 
   const clearFilters = () => {
@@ -149,11 +166,10 @@ export default function FindJobs() {
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold">Find Jobs</h1>
         <p className="text-gray-500 mt-1">
-          {filtered.length} {filtered.length === 1 ? 'role' : 'roles'} available
+          {loading ? 'Loading roles...' : `${filtered.length} ${filtered.length === 1 ? 'role' : 'roles'} available`}
         </p>
       </div>
 
-      {/* Search bar */}
       <div className="card mb-6 !p-3">
         <div className="flex flex-col md:flex-row items-stretch gap-2">
           <div className="flex items-center gap-2 px-3 py-2 flex-1 rounded-lg bg-gray-50">
@@ -197,31 +213,51 @@ export default function FindJobs() {
                 onChange={(e) => setCategory(e.target.value)}
               >
                 {CATEGORIES.map((c) => (
-                  <option key={c.v} value={c.v}>{c.l}</option>
+                  <option key={c.v} value={c.v}>
+                    {c.l}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="label">Job type</label>
-              <select className="input" value={jobType} onChange={(e) => setJobType(e.target.value)}>
+              <select
+                className="input"
+                value={jobType}
+                onChange={(e) => setJobType(e.target.value)}
+              >
                 {JOB_TYPES.map((t) => (
-                  <option key={t.v} value={t.v}>{t.l}</option>
+                  <option key={t.v} value={t.v}>
+                    {t.l}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="label">Work mode</label>
-              <select className="input" value={workMode} onChange={(e) => setWorkMode(e.target.value)}>
+              <select
+                className="input"
+                value={workMode}
+                onChange={(e) => setWorkMode(e.target.value)}
+              >
                 {WORK_MODES.map((w) => (
-                  <option key={w.v} value={w.v}>{w.l}</option>
+                  <option key={w.v} value={w.v}>
+                    {w.l}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
               <label className="label">Experience</label>
-              <select className="input" value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)}>
+              <select
+                className="input"
+                value={experienceLevel}
+                onChange={(e) => setExperienceLevel(e.target.value)}
+              >
                 {EXPERIENCE.map((x) => (
-                  <option key={x.v} value={x.v}>{x.l}</option>
+                  <option key={x.v} value={x.v}>
+                    {x.l}
+                  </option>
                 ))}
               </select>
             </div>
@@ -237,16 +273,17 @@ export default function FindJobs() {
         )}
       </div>
 
-      {/* Job list */}
       {loading ? (
-        <div className="min-h-[40vh] flex items-center justify-center">
-          <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <SkeletonList count={4} variant="job" />
       ) : filtered.length === 0 ? (
         <div className="card text-center py-16">
           <Briefcase size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-semibold text-gray-700">No jobs match your search</p>
-          <p className="text-sm text-gray-500 mt-1">Try adjusting your filters or search terms.</p>
+          <p className="font-semibold text-gray-700">
+            No jobs match your search
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Try adjusting your filters or search terms.
+          </p>
           {activeFilters > 0 && (
             <button onClick={clearFilters} className="btn-outline mt-6">
               Clear filters
@@ -274,8 +311,11 @@ export default function FindJobs() {
                       {j.workMode}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1 font-medium">
+                  <p className="text-sm text-gray-600 mt-1 font-medium inline-flex items-center gap-1.5">
                     {j.companyName}
+                    {j.companyVerified && (
+                      <BadgeCheck size={13} className="text-blue-600" />
+                    )}
                   </p>
                   <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                     <span className="inline-flex items-center gap-1">
