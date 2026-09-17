@@ -33,6 +33,16 @@ import CompanyProfile from './pages/CompanyProfile'
 import ApplicantProfileView from './pages/ApplicantProfileView'
 import NotFound from './pages/NotFound'
 import { useInterviewReminders } from './hooks/useInterviewReminders'
+import About from './pages/About'
+import Contact from './pages/Contact'
+import Pricing from './pages/Pricing'
+import HowItWorks from './pages/HowItWorks'
+import Careers from './pages/Careers'
+import Blog from './pages/Blog'
+import HelpCenter from './pages/HelpCenter'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
+import Security from './pages/Security'
 
 function App() {
   useInterviewReminders()
@@ -48,6 +58,17 @@ function App() {
         <Route path="jobs" element={<FindJobs />} />
         <Route path="jobs/:id" element={<JobDetails />} />
         <Route path="companies/:id" element={<CompanyProfile />} />
+        {/* Static pages */}
+<Route path="about" element={<About />} />
+<Route path="contact" element={<Contact />} />
+<Route path="pricing" element={<Pricing />} />
+<Route path="how-it-works" element={<HowItWorks />} />
+<Route path="careers" element={<Careers />} />
+<Route path="blog" element={<Blog />} />
+<Route path="help" element={<HelpCenter />} />
+<Route path="privacy" element={<Privacy />} />
+<Route path="terms" element={<Terms />} />
+<Route path="security" element={<Security />} />
 
         {/* Job seeker */}
         <Route

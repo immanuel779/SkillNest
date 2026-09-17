@@ -308,6 +308,14 @@
   .reveal-in { opacity: 0; animation: fade-in 0.9s ease-out forwards; }
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* =========================================
    Scrollbar
    ========================================= */
