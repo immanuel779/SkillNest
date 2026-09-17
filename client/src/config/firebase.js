@@ -1,19 +1,51 @@
-import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, getApp } from 'firebase/app'
+import {
+  initializeAuth,
+  getAuth,
+  browserLocalPersistence,
+} from 'firebase/auth'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  getFirestore,
+} from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDzU2vdIxnmvIzKKRoKIZmeXB3xYCQkNm8',
-  authDomain: 'skillnest-mvp-b4bef.firebaseapp.com',
-  projectId: 'skillnest-mvp-b4bef',
-  storageBucket: 'skillnest-mvp-b4bef.firebasestorage.app',
-  messagingSenderId: '251553022844',
-  appId: '1:251553022844:web:01b3b4bc671674d7251af9',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app = initializeApp(firebaseConfig)
+// Prevent duplicate initialization during Vite HMR
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export const storage = getStorage(app)
+// Auth with local persistence (users stay logged in across sessions)
+let authInstance
+try {
+  authInstance = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+  })
+} catch {
+  // Already initialized (HMR) — reuse the existing instance
+  authInstance = getAuth(app)
+}
+
+// Firestore with offline cache + multi-tab sync
+let dbInstance
+try {
+  dbInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  })
+} catch {
+  // Already initialized (HMR) — reuse the existing instance
+  dbInstance = getFirestore(app)
+}
+
+export const auth = authInstance
+export const db = dbInstance
