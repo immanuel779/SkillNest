@@ -12,12 +12,15 @@ import {
   AlertCircle,
   X,
   Phone,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getProfile, updateProfile } from '../services/profileService'
 import { uploadImage, uploadDocument } from '../services/storageService'
 import { friendlyError } from '../utils/errors'
+import AIResumeFeedback from '../components/ai/AIResumeFeedback'
+import { extractPdfText } from '../utils/pdf'
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 const JOB_TYPES = ['full_time', 'part_time', 'contract', 'internship', 'temporary']
@@ -25,13 +28,73 @@ const WORK_MODES = ['onsite', 'remote', 'hybrid']
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 
+/** Fallback: build a plain-text resume from profile fields. */
+function buildResumeText(form) {
+  const lines = []
+  if (form.fullName) lines.push(`NAME: ${form.fullName}`)
+  if (form.headline) lines.push(`HEADLINE: ${form.headline}`)
+  if (form.location) lines.push(`LOCATION: ${form.location}`)
+  if (form.phone) lines.push(`PHONE: ${form.phone}`)
+  if (form.linkedinUrl) lines.push(`LINKEDIN: ${form.linkedinUrl}`)
+  if (form.githubUrl) lines.push(`GITHUB: ${form.githubUrl}`)
+  if (form.portfolioUrl) lines.push(`PORTFOLIO: ${form.portfolioUrl}`)
+
+  if (form.about) {
+    lines.push('', 'ABOUT:', form.about)
+  }
+
+  if (form.skills?.length) {
+    lines.push('', 'SKILLS:')
+    form.skills.forEach((s) => lines.push(`- ${s.name} (${s.level || 'Intermediate'})`))
+  }
+
+  if (form.experience?.length) {
+    lines.push('', 'EXPERIENCE:')
+    form.experience.forEach((x) => {
+      lines.push(
+        `- ${x.title || 'Role'} at ${x.company || 'Company'}${
+          x.location ? `, ${x.location}` : ''
+        } (${x.startDate || '?'} – ${x.isCurrent ? 'Present' : x.endDate || '?'})`
+      )
+      if (x.description) lines.push(`  ${x.description}`)
+    })
+  }
+
+  if (form.education?.length) {
+    lines.push('', 'EDUCATION:')
+    form.education.forEach((x) => {
+      lines.push(
+        `- ${x.degree || 'Degree'}${x.field ? ` in ${x.field}` : ''} — ${
+          x.school || 'School'
+        } (${x.startDate || '?'} – ${x.endDate || '?'})`
+      )
+    })
+  }
+
+  return lines.join('\n').trim()
+}
+
+/** Turn any null into '' so inputs never get a null value prop. */
+function noNulls(obj) {
+  if (obj == null) return obj
+  if (Array.isArray(obj)) return obj.map(noNulls)
+  if (typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [k, v === null ? '' : noNulls(v)])
+    )
+  }
+  return obj
+}
+
 export default function JobSeekerProfile() {
   const { user, refreshProfile } = useAuth()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [extracting, setExtracting] = useState(false)
   const [error, setError] = useState('')
+  const [showResumeFeedback, setShowResumeFeedback] = useState(false)
 
   const [form, setForm] = useState({
     fullName: '',
@@ -51,6 +114,7 @@ export default function JobSeekerProfile() {
     education: [],
     resumeUrl: '',
     resumeName: '',
+    resumeText: '',
   })
 
   const photoInput = useRef(null)
@@ -63,7 +127,8 @@ export default function JobSeekerProfile() {
       try {
         const data = await getProfile(user.uid)
         if (alive && data) {
-          setForm((f) => ({ ...f, ...data }))
+          // Normalize every null to '' (and recurse into arrays/objects)
+          setForm((f) => ({ ...f, ...noNulls(data) }))
         }
       } catch (err) {
         setError(friendlyError(err))
@@ -83,23 +148,25 @@ export default function JobSeekerProfile() {
     setSaving(true)
     try {
       const payload = {
-        fullName: form.fullName,
-        headline: form.headline,
-        about: form.about,
-        location: form.location,
-        phone: form.phone,
-        photoURL: form.photoURL,
-        portfolioUrl: form.portfolioUrl,
-        linkedinUrl: form.linkedinUrl,
-        githubUrl: form.githubUrl,
-        expectedSalary: form.expectedSalary ? Number(form.expectedSalary) : null,
-        preferredJobType: form.preferredJobType,
-        preferredWorkMode: form.preferredWorkMode,
-        skills: form.skills,
-        experience: form.experience,
-        education: form.education,
-        resumeUrl: form.resumeUrl,
-        resumeName: form.resumeName,
+        fullName: form.fullName || '',
+        headline: form.headline || '',
+        about: form.about || '',
+        location: form.location || '',
+        phone: form.phone || '',
+        photoURL: form.photoURL || '',
+        portfolioUrl: form.portfolioUrl || '',
+        linkedinUrl: form.linkedinUrl || '',
+        githubUrl: form.githubUrl || '',
+        // Save '' instead of null so the next load never carries a null back
+        expectedSalary: form.expectedSalary ? Number(form.expectedSalary) : '',
+        preferredJobType: form.preferredJobType || '',
+        preferredWorkMode: form.preferredWorkMode || '',
+        skills: form.skills || [],
+        experience: form.experience || [],
+        education: form.education || [],
+        resumeUrl: form.resumeUrl || '',
+        resumeName: form.resumeName || '',
+        resumeText: form.resumeText || '',
       }
       await updateProfile(user.uid, payload)
       await refreshProfile()
@@ -135,13 +202,51 @@ export default function JobSeekerProfile() {
     if (!file) return
     setError('')
     setUploading(true)
+
     try {
       const url = await uploadDocument(`resumes/${user.uid}`, file)
-      update('resumeUrl', url)
-      update('resumeName', file.name)
-      await updateProfile(user.uid, { resumeUrl: url, resumeName: file.name })
+
+      let extractedText = ''
+      const isPdf =
+        file.type === 'application/pdf' ||
+        file.name?.toLowerCase().endsWith('.pdf')
+
+      if (isPdf) {
+        setExtracting(true)
+        try {
+          extractedText = await extractPdfText(file)
+          toast.success(
+            'Resume uploaded',
+            'We extracted the text for AI feedback.'
+          )
+        } catch (err) {
+          console.warn('PDF extraction failed:', err)
+          toast.info(
+            'Resume uploaded',
+            'Could not read text from the PDF. You can paste it manually below.'
+          )
+        } finally {
+          setExtracting(false)
+        }
+      } else {
+        toast.success('Resume uploaded')
+      }
+
+      const updates = {
+        resumeUrl: url,
+        resumeName: file.name,
+      }
+      if (extractedText) updates.resumeText = extractedText
+
+      setForm((f) => ({
+        ...f,
+        resumeUrl: url,
+        resumeName: file.name,
+        resumeText: extractedText || f.resumeText || '',
+      }))
+
+      await updateProfile(user.uid, updates)
       await refreshProfile()
-      toast.success('Resume uploaded')
     } catch (err) {
       toast.error('Upload failed', friendlyError(err))
     } finally {
@@ -215,6 +320,8 @@ export default function JobSeekerProfile() {
     )
   }
 
+  const resumeTextForAI = form.resumeText?.trim() || buildResumeText(form)
+
   return (
     <div className="container-app py-10 pb-32">
       <div className="mb-8">
@@ -277,13 +384,13 @@ export default function JobSeekerProfile() {
 
           <div className="flex-1 min-w-0">
             <input
-              value={form.fullName}
+              value={form.fullName || ''}
               onChange={(e) => update('fullName', e.target.value)}
               placeholder="Your full name"
               className="text-2xl font-extrabold bg-transparent outline-none w-full border-b border-transparent focus:border-brand-300 transition-colors"
             />
             <input
-              value={form.headline}
+              value={form.headline || ''}
               onChange={(e) => update('headline', e.target.value)}
               placeholder="Professional headline (e.g. Senior Frontend Engineer)"
               className="mt-2 text-brand-700 font-semibold bg-transparent outline-none w-full border-b border-transparent focus:border-brand-300 transition-colors"
@@ -291,7 +398,7 @@ export default function JobSeekerProfile() {
             <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
               <MapPin size={14} />
               <input
-                value={form.location}
+                value={form.location || ''}
                 onChange={(e) => update('location', e.target.value)}
                 placeholder="Location (City, Country)"
                 className="bg-transparent outline-none flex-1 border-b border-transparent focus:border-brand-300 transition-colors"
@@ -304,7 +411,7 @@ export default function JobSeekerProfile() {
       {/* About + Contact */}
       <Section title="About" subtitle="Tell employers who you are.">
         <textarea
-          value={form.about}
+          value={form.about || ''}
           onChange={(e) => update('about', e.target.value)}
           rows={5}
           placeholder="A short bio about your experience, focus, and what you're looking for..."
@@ -318,7 +425,7 @@ export default function JobSeekerProfile() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
               <input
-                value={form.phone}
+                value={form.phone || ''}
                 onChange={(e) => update('phone', e.target.value)}
                 placeholder="+234 803 123 4567"
                 className="input pl-10"
@@ -330,7 +437,7 @@ export default function JobSeekerProfile() {
           </Field>
           <Field label="Portfolio URL">
             <input
-              value={form.portfolioUrl}
+              value={form.portfolioUrl || ''}
               onChange={(e) => update('portfolioUrl', e.target.value)}
               placeholder="https://yourportfolio.com"
               className="input"
@@ -338,7 +445,7 @@ export default function JobSeekerProfile() {
           </Field>
           <Field label="LinkedIn">
             <input
-              value={form.linkedinUrl}
+              value={form.linkedinUrl || ''}
               onChange={(e) => update('linkedinUrl', e.target.value)}
               placeholder="https://linkedin.com/in/you"
               className="input"
@@ -346,7 +453,7 @@ export default function JobSeekerProfile() {
           </Field>
           <Field label="GitHub">
             <input
-              value={form.githubUrl}
+              value={form.githubUrl || ''}
               onChange={(e) => update('githubUrl', e.target.value)}
               placeholder="https://github.com/you"
               className="input"
@@ -380,7 +487,7 @@ export default function JobSeekerProfile() {
               >
                 <span className="text-sm font-medium text-brand-800">{s.name}</span>
                 <select
-                  value={s.level}
+                  value={s.level || 'Intermediate'}
                   onChange={(e) => setSkillLevel(s.name, e.target.value)}
                   className="text-xs bg-transparent text-brand-600 outline-none cursor-pointer"
                 >
@@ -424,7 +531,7 @@ export default function JobSeekerProfile() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Job title">
                     <input
-                      value={x.title}
+                      value={x.title || ''}
                       onChange={(e) => updateExperience(x.id, 'title', e.target.value)}
                       className="input"
                       placeholder="Frontend Engineer"
@@ -432,7 +539,7 @@ export default function JobSeekerProfile() {
                   </Field>
                   <Field label="Company">
                     <input
-                      value={x.company}
+                      value={x.company || ''}
                       onChange={(e) => updateExperience(x.id, 'company', e.target.value)}
                       className="input"
                       placeholder="Acme Inc."
@@ -440,7 +547,7 @@ export default function JobSeekerProfile() {
                   </Field>
                   <Field label="Location">
                     <input
-                      value={x.location}
+                      value={x.location || ''}
                       onChange={(e) => updateExperience(x.id, 'location', e.target.value)}
                       className="input"
                       placeholder="Remote"
@@ -449,7 +556,7 @@ export default function JobSeekerProfile() {
                   <Field label="Start date">
                     <input
                       type="month"
-                      value={x.startDate}
+                      value={x.startDate || ''}
                       onChange={(e) => updateExperience(x.id, 'startDate', e.target.value)}
                       className="input"
                     />
@@ -457,7 +564,7 @@ export default function JobSeekerProfile() {
                   <Field label="End date">
                     <input
                       type="month"
-                      value={x.endDate}
+                      value={x.endDate || ''}
                       onChange={(e) => updateExperience(x.id, 'endDate', e.target.value)}
                       className="input"
                       disabled={x.isCurrent}
@@ -466,7 +573,7 @@ export default function JobSeekerProfile() {
                   <label className="flex items-center gap-2 mt-6 text-sm text-gray-600">
                     <input
                       type="checkbox"
-                      checked={x.isCurrent}
+                      checked={!!x.isCurrent}
                       onChange={(e) => updateExperience(x.id, 'isCurrent', e.target.checked)}
                     />
                     Currently working here
@@ -475,7 +582,7 @@ export default function JobSeekerProfile() {
                 <Field label="Description" className="mt-3">
                   <textarea
                     rows={3}
-                    value={x.description}
+                    value={x.description || ''}
                     onChange={(e) => updateExperience(x.id, 'description', e.target.value)}
                     className="input resize-none"
                     placeholder="What did you work on?"
@@ -518,7 +625,7 @@ export default function JobSeekerProfile() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="School">
                     <input
-                      value={x.school}
+                      value={x.school || ''}
                       onChange={(e) => updateEducation(x.id, 'school', e.target.value)}
                       className="input"
                       placeholder="University of Lagos"
@@ -526,7 +633,7 @@ export default function JobSeekerProfile() {
                   </Field>
                   <Field label="Degree">
                     <input
-                      value={x.degree}
+                      value={x.degree || ''}
                       onChange={(e) => updateEducation(x.id, 'degree', e.target.value)}
                       className="input"
                       placeholder="B.Sc."
@@ -534,7 +641,7 @@ export default function JobSeekerProfile() {
                   </Field>
                   <Field label="Field of study">
                     <input
-                      value={x.field}
+                      value={x.field || ''}
                       onChange={(e) => updateEducation(x.id, 'field', e.target.value)}
                       className="input"
                       placeholder="Computer Science"
@@ -543,7 +650,7 @@ export default function JobSeekerProfile() {
                   <Field label="Start year">
                     <input
                       type="month"
-                      value={x.startDate}
+                      value={x.startDate || ''}
                       onChange={(e) => updateEducation(x.id, 'startDate', e.target.value)}
                       className="input"
                     />
@@ -551,7 +658,7 @@ export default function JobSeekerProfile() {
                   <Field label="End year">
                     <input
                       type="month"
-                      value={x.endDate}
+                      value={x.endDate || ''}
                       onChange={(e) => updateEducation(x.id, 'endDate', e.target.value)}
                       className="input"
                     />
@@ -577,7 +684,7 @@ export default function JobSeekerProfile() {
           <Field label="Expected salary (USD / year)">
             <input
               type="number"
-              value={form.expectedSalary}
+              value={form.expectedSalary || ''}
               onChange={(e) => update('expectedSalary', e.target.value)}
               className="input"
               placeholder="80000"
@@ -585,7 +692,7 @@ export default function JobSeekerProfile() {
           </Field>
           <Field label="Preferred job type">
             <select
-              value={form.preferredJobType}
+              value={form.preferredJobType || ''}
               onChange={(e) => update('preferredJobType', e.target.value)}
               className="input"
             >
@@ -599,7 +706,7 @@ export default function JobSeekerProfile() {
           </Field>
           <Field label="Preferred work mode">
             <select
-              value={form.preferredWorkMode}
+              value={form.preferredWorkMode || ''}
               onChange={(e) => update('preferredWorkMode', e.target.value)}
               className="input"
             >
@@ -615,7 +722,19 @@ export default function JobSeekerProfile() {
       </Section>
 
       {/* Resume */}
-      <Section title="Resume / CV" subtitle="Upload a PDF, DOC, or DOCX (max 10MB).">
+      <Section
+        title="Resume / CV"
+        subtitle="Upload a PDF, DOC, or DOCX (max 10MB)."
+        action={
+          <button
+            type="button"
+            onClick={() => setShowResumeFeedback(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg px-2.5 py-1.5 transition shrink-0"
+          >
+            <Sparkles size={12} /> AI Feedback
+          </button>
+        }
+      >
         {form.resumeUrl ? (
           <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50/50 p-4 gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -638,30 +757,36 @@ export default function JobSeekerProfile() {
             </div>
             <button
               onClick={() => resumeInput.current?.click()}
-              disabled={uploading}
+              disabled={uploading || extracting}
               className="btn-outline !py-2 !px-3 text-sm shrink-0"
             >
-              {uploading ? 'Uploading...' : 'Replace'}
+              {uploading ? 'Uploading...' : extracting ? 'Reading...' : 'Replace'}
             </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => resumeInput.current?.click()}
-            disabled={uploading}
+            disabled={uploading || extracting}
             className="w-full rounded-xl border-2 border-dashed border-gray-300 hover:border-brand-400 hover:bg-brand-50/40 transition p-8 text-center disabled:opacity-60"
           >
             <div className="w-12 h-12 mx-auto rounded-xl bg-brand-50 flex items-center justify-center mb-3">
-              {uploading ? (
+              {uploading || extracting ? (
                 <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Upload size={20} className="text-brand-700" />
               )}
             </div>
             <p className="font-semibold text-gray-800">
-              {uploading ? 'Uploading...' : 'Click to upload your resume'}
+              {uploading
+                ? 'Uploading...'
+                : extracting
+                ? 'Reading PDF...'
+                : 'Click to upload your resume'}
             </p>
-            <p className="text-xs text-gray-500 mt-1">PDF, DOC, or DOCX — max 10MB</p>
+            <p className="text-xs text-gray-500 mt-1">
+              PDF, DOC, or DOCX — max 10MB
+            </p>
           </button>
         )}
         <input
@@ -671,6 +796,48 @@ export default function JobSeekerProfile() {
           onChange={onResume}
           className="hidden"
         />
+
+        {form.resumeUrl && (
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="label !mb-0">
+                Resume text
+                <span className="text-xs text-gray-400 font-normal ml-2">
+                  (used for AI feedback)
+                </span>
+              </label>
+              {form.resumeText && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Clear the resume text? You can paste or re-extract later.'
+                      )
+                    ) {
+                      update('resumeText', '')
+                    }
+                  }}
+                  className="text-xs text-gray-400 hover:text-red-600"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <textarea
+              rows={10}
+              className="input resize-none font-mono text-xs leading-relaxed"
+              value={form.resumeText || ''}
+              onChange={(e) => update('resumeText', e.target.value)}
+              placeholder="We'll try to extract text from your PDF automatically. If it couldn't be read, paste your resume text here instead — the AI will use this for feedback."
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              {form.resumeText
+                ? `${form.resumeText.length.toLocaleString()} characters saved. Edit anytime.`
+                : 'Empty — the AI will fall back to your profile info for feedback.'}
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* Sticky save bar */}
@@ -678,7 +845,7 @@ export default function JobSeekerProfile() {
         <div className="container-app py-3 flex items-center justify-end">
           <button
             onClick={handleSave}
-            disabled={saving || uploading}
+            disabled={saving || uploading || extracting}
             className="btn-primary"
           >
             <Save size={16} />
@@ -686,6 +853,13 @@ export default function JobSeekerProfile() {
           </button>
         </div>
       </div>
+
+      <AIResumeFeedback
+        open={showResumeFeedback}
+        onClose={() => setShowResumeFeedback(false)}
+        resumeText={resumeTextForAI}
+        profile={form}
+      />
     </div>
   )
 }

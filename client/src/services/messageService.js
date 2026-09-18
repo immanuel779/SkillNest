@@ -19,6 +19,13 @@ function conversationId(employerId, candidateId, jobId) {
   return `${employerId}__${candidateId}__${jobId}`
 }
 
+const sortByLastActivity = (items) =>
+  items.sort((a, b) => {
+    const ta = a.lastMessageAt?.seconds || a.createdAt?.seconds || 0
+    const tb = b.lastMessageAt?.seconds || b.createdAt?.seconds || 0
+    return tb - ta
+  })
+
 export async function ensureConversation({
   employerId,
   candidateId,
@@ -136,11 +143,7 @@ export async function listMyConversations(uid) {
   )
   const snap = await getDocs(q)
   const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-  return items.sort((a, b) => {
-    const ta = a.lastMessageAt?.seconds || a.createdAt?.seconds || 0
-    const tb = b.lastMessageAt?.seconds || b.createdAt?.seconds || 0
-    return tb - ta
-  })
+  return sortByLastActivity(items)
 }
 
 export function subscribeConversations(uid, callback) {
@@ -150,13 +153,59 @@ export function subscribeConversations(uid, callback) {
   )
   return onSnapshot(q, (snap) => {
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    items.sort((a, b) => {
-      const ta = a.lastMessageAt?.seconds || a.createdAt?.seconds || 0
-      const tb = b.lastMessageAt?.seconds || b.createdAt?.seconds || 0
-      return tb - ta
-    })
+    sortByLastActivity(items)
     callback(items)
   })
+}
+
+/**
+ * Admin-only: stream ALL conversations on the platform.
+ * Requires Firestore rules to allow admin reads on the conversations collection.
+ */
+export function subscribeAllConversations(callback) {
+  const q = query(collection(db, 'conversations'))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      sortByLastActivity(items)
+      callback(items)
+    },
+    (err) => {
+      console.warn('subscribeAllConversations failed:', err?.message)
+      callback([])
+    }
+  )
+}
+
+/**
+ * Admin-only: stream unread counts grouped by conversation for everyone.
+ * Admin isn't a participant, so the standard per-user unread subscription
+ * wouldn't return anything. This one just counts unread messages globally
+ * (or per-conversation) so the badges still render.
+ */
+export function subscribeAllUnreadByConversation(callback) {
+  const q = query(
+    collection(db, 'messages'),
+    where('isRead', '==', false)
+  )
+  return onSnapshot(
+    q,
+    (snap) => {
+      const map = {}
+      snap.docs.forEach((d) => {
+        const m = d.data()
+        const cid = m.conversationId
+        if (!cid) return
+        map[cid] = (map[cid] || 0) + 1
+      })
+      callback(map)
+    },
+    (err) => {
+      console.warn('subscribeAllUnreadByConversation failed:', err?.message)
+      callback({})
+    }
+  )
 }
 
 export function subscribeMessages(convId, callback) {

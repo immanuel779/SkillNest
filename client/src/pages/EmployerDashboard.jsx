@@ -39,15 +39,27 @@ export default function EmployerDashboard() {
         if (!alive) return
 
         const activeJobs = jobs.filter((j) => j.status === 'published').length
-        const totalApplicants = jobs.reduce(
-          (s, j) => s + (j.applicantCount || 0),
-          0
-        )
 
         const appsSnap = await getDocs(
-          query(collection(db, 'applications'), where('employerId', '==', user.uid))
+          query(
+            collection(db, 'applications'),
+            where('employerId', '==', user.uid)
+          )
         )
         const apps = appsSnap.docs.map((d) => d.data())
+
+        // Compute per-job counts from the real applications.
+        const countsByJob = {}
+        apps.forEach((a) => {
+          if (a.jobId) countsByJob[a.jobId] = (countsByJob[a.jobId] || 0) + 1
+        })
+
+        const jobsWithCounts = jobs.map((j) => ({
+          ...j,
+          applicantCount: countsByJob[j.id] || 0,
+        }))
+
+        const totalApplicants = apps.length
 
         const upcomingInterviews = interviewsList.filter(
           (i) => i.status === 'scheduled'
@@ -61,7 +73,7 @@ export default function EmployerDashboard() {
           interviews: upcomingInterviews,
           hires: apps.filter((a) => a.status === 'hired').length,
         })
-        setRecentJobs(jobs.slice(0, 4))
+        setRecentJobs(jobsWithCounts.slice(0, 4))
       } finally {
         if (alive) setLoading(false)
       }
@@ -72,25 +84,47 @@ export default function EmployerDashboard() {
   }, [user])
 
   const cards = [
-    { label: 'Active Jobs', value: stats.activeJobs, icon: Briefcase, color: 'brand' },
-    { label: 'Applicants', value: stats.applicants, icon: Users, color: 'accent' },
-    { label: 'Shortlisted', value: stats.shortlisted, icon: Star, color: 'brand' },
-    { label: 'Interviews', value: stats.interviews, icon: CalendarCheck, color: 'accent' },
+    {
+      label: 'Active Jobs',
+      value: stats.activeJobs,
+      icon: Briefcase,
+      color: 'brand',
+    },
+    {
+      label: 'Applicants',
+      value: stats.applicants,
+      icon: Users,
+      color: 'accent',
+    },
+    {
+      label: 'Shortlisted',
+      value: stats.shortlisted,
+      icon: Star,
+      color: 'brand',
+    },
+    {
+      label: 'Interviews',
+      value: stats.interviews,
+      icon: CalendarCheck,
+      color: 'accent',
+    },
     { label: 'Hires', value: stats.hires, icon: Trophy, color: 'brand' },
   ]
 
   return (
-    <div className="container-app py-10">
-      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+    <div className="container-app py-6 sm:py-10">
+      <div className="flex justify-between items-center mb-6 sm:mb-8 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold">Employer Dashboard</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold">
+            Employer Dashboard
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">
             Welcome, {profile?.fullName || user?.email}.
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Link to="/employer/analytics" className="btn-outline">
-            <TrendingUp size={16} /> View analytics
+            <TrendingUp size={16} /> Analytics
           </Link>
           <Link to="/employer/jobs/new" className="btn-primary">
             <Plus size={16} /> Post a job
@@ -98,7 +132,7 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {cards.map((c) => (
           <div key={c.label} className="card">
             <div
@@ -110,15 +144,15 @@ export default function EmployerDashboard() {
             >
               <c.icon size={18} />
             </div>
-            <div className="text-sm text-gray-500">{c.label}</div>
-            <div className="text-3xl font-extrabold mt-1">
+            <div className="text-xs sm:text-sm text-gray-500">{c.label}</div>
+            <div className="text-2xl sm:text-3xl font-extrabold mt-1">
               {loading ? '—' : c.value}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-10 card">
+      <div className="mt-8 sm:mt-10 card">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-lg font-bold">Recent jobs</h2>
           <div className="flex items-center gap-4">
@@ -148,14 +182,17 @@ export default function EmployerDashboard() {
                 to={`/employer/jobs/${j.id}/applicants`}
                 className="py-3 flex items-center justify-between hover:bg-gray-50 -mx-4 px-4 rounded-lg transition"
               >
-                <div>
-                  <div className="font-semibold text-gray-900">{j.title}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-gray-900 truncate">
+                    {j.title}
+                  </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {j.status} · {j.applicantCount || 0} applicants ·{' '}
+                    {j.status} · {j.applicantCount || 0}{' '}
+                    {j.applicantCount === 1 ? 'applicant' : 'applicants'} ·{' '}
                     {j.views || 0} views
                   </div>
                 </div>
-                <span className="text-xs text-brand-700 font-semibold">
+                <span className="text-xs text-brand-700 font-semibold shrink-0 ml-2">
                   View →
                 </span>
               </Link>

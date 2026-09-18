@@ -9,6 +9,7 @@ import {
   addDoc,
   limit,
   serverTimestamp,
+  increment,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { createNotification, notifyAdmins } from './notificationService'
@@ -73,6 +74,36 @@ export async function listApplicationsForJob(jobId, employerId) {
   }
 }
 
+/**
+ * Count applications per job id for a single employer.
+ * Queries only by employerId (which matches the security rule pattern),
+ * then groups by jobId client-side. No composite index needed.
+ */
+export async function countApplicationsByEmployer(employerId, jobIds) {
+  const counts = {}
+  if (!employerId || !jobIds || jobIds.length === 0) return counts
+  jobIds.forEach((id) => {
+    counts[id] = 0
+  })
+
+  try {
+    const q = query(
+      collection(db, 'applications'),
+      where('employerId', '==', employerId)
+    )
+    const snap = await getDocs(q)
+    snap.docs.forEach((d) => {
+      const jid = d.data().jobId
+      if (jid && counts[jid] !== undefined) counts[jid] += 1
+    })
+  } catch (err) {
+    if (!isPermissionError(err)) {
+      console.warn('countApplicationsByEmployer failed:', err?.message)
+    }
+  }
+  return counts
+}
+
 export async function listMyApplications(uid) {
   try {
     const q = query(
@@ -130,22 +161,18 @@ export async function createApplication(uid, email, job, data) {
     scorecard: null,
     scorecardAvg: null,
     status: 'applied',
-    statusHistory: [
-      { status: 'applied', at: now, by: 'candidate' },
-    ],
+    statusHistory: [{ status: 'applied', at: now, by: 'candidate' }],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
 
+  // Atomic increment — safe against race conditions.
   try {
-    const jobRef = doc(db, 'jobs', job.id)
-    const jobSnap = await getDoc(jobRef)
-    if (jobSnap.exists()) {
-      const current = jobSnap.data().applicantCount || 0
-      await updateDoc(jobRef, { applicantCount: current + 1 })
-    }
-  } catch {
-    /* best-effort */
+    await updateDoc(doc(db, 'jobs', job.id), {
+      applicantCount: increment(1),
+    })
+  } catch (err) {
+    console.warn('Could not increment applicantCount:', err?.message)
   }
 
   try {
@@ -199,7 +226,6 @@ export async function updateApplicationStatus(appId, status, options = {}) {
   const now = new Date()
   const history = Array.isArray(app.statusHistory) ? app.statusHistory : []
 
-  // Don't double-append if status hasn't changed
   const last = history[history.length - 1]
   const nextHistory =
     last?.status === status

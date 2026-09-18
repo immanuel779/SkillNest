@@ -4,6 +4,7 @@ import { Plus, X, Save, AlertCircle, ArrowLeft, Sparkles } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyCompany } from '../services/companyService'
 import { createJob, updateJob, getJob } from '../services/jobService'
+import AIJobDescriptionWriter from '../components/ai/AIJobDescriptionWriter'
 
 const JOB_TYPES = [
   { v: 'full_time', l: 'Full-time' },
@@ -41,6 +42,50 @@ function Field({ label, children, className = '' }) {
       {children}
     </div>
   )
+}
+
+/**
+ * Split the AI response into the three sections we asked for.
+ * Returns { description, responsibilities, requirements }.
+ */
+function parseAIJobDescription(text) {
+  if (!text) return { description: '', responsibilities: '', requirements: '' }
+
+  const lines = text.split('\n')
+  const sections = { ABOUT: [], RESPONSIBILITIES: [], REQUIREMENTS: [], OTHER: [] }
+  let current = 'ABOUT'
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    const upper = line.toUpperCase()
+    if (upper.startsWith('ABOUT THE ROLE') || upper === 'ABOUT THE ROLE:') {
+      current = 'ABOUT'
+      continue
+    }
+    if (upper.startsWith('RESPONSIBILITIES')) {
+      current = 'RESPONSIBILITIES'
+      continue
+    }
+    if (upper.startsWith('REQUIREMENTS')) {
+      current = 'REQUIREMENTS'
+      continue
+    }
+    if (upper.startsWith('NICE TO HAVE')) {
+      // Fold nice-to-haves into requirements
+      current = 'REQUIREMENTS'
+      sections.REQUIREMENTS.push('Nice to have:')
+      continue
+    }
+    sections[current].push(line)
+  }
+
+  return {
+    description: sections.ABOUT.join('\n').trim(),
+    responsibilities: sections.RESPONSIBILITIES.join('\n').trim(),
+    requirements: sections.REQUIREMENTS.join('\n').trim(),
+  }
 }
 
 export default function EmployerPostJob() {
@@ -162,8 +207,13 @@ export default function EmployerPostJob() {
       <div className="container-app py-16 max-w-2xl">
         <div className="card text-center">
           <h2 className="text-xl font-bold">Create your company profile first</h2>
-          <p className="text-gray-500 mt-2">You need a company profile before posting jobs.</p>
-          <button onClick={() => navigate('/employer/company')} className="btn-primary mt-6">
+          <p className="text-gray-500 mt-2">
+            You need a company profile before posting jobs.
+          </p>
+          <button
+            onClick={() => navigate('/employer/company')}
+            className="btn-primary mt-6"
+          >
             Create company profile
           </button>
         </div>
@@ -184,7 +234,9 @@ export default function EmployerPostJob() {
         {isEdit ? 'Edit Job' : 'Post a Job'}
       </h1>
       <p className="text-gray-500 mb-8">
-        {isEdit ? 'Update this job posting.' : 'Fill in the details to publish a new role.'}
+        {isEdit
+          ? 'Update this job posting.'
+          : 'Fill in the details to publish a new role.'}
       </p>
 
       {error && (
@@ -227,7 +279,9 @@ export default function EmployerPostJob() {
               onChange={(e) => update('jobType', e.target.value)}
             >
               {JOB_TYPES.map((j) => (
-                <option key={j.v} value={j.v}>{j.l}</option>
+                <option key={j.v} value={j.v}>
+                  {j.l}
+                </option>
               ))}
             </select>
           </Field>
@@ -238,7 +292,9 @@ export default function EmployerPostJob() {
               onChange={(e) => update('workMode', e.target.value)}
             >
               {WORK_MODES.map((w) => (
-                <option key={w.v} value={w.v}>{w.l}</option>
+                <option key={w.v} value={w.v}>
+                  {w.l}
+                </option>
               ))}
             </select>
           </Field>
@@ -249,7 +305,9 @@ export default function EmployerPostJob() {
               onChange={(e) => update('experienceLevel', e.target.value)}
             >
               {EXPERIENCE.map((e) => (
-                <option key={e.v} value={e.v}>{e.l}</option>
+                <option key={e.v} value={e.v}>
+                  {e.l}
+                </option>
               ))}
             </select>
           </Field>
@@ -299,6 +357,40 @@ export default function EmployerPostJob() {
       </Section>
 
       <Section title="Description">
+        {/* AI writer — fills all three fields below */}
+        <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+          <div>
+            <p className="text-sm font-semibold text-gray-800">
+              Let AI write it for you
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Uses your title, level, and skills to draft About, Responsibilities, and Requirements.
+            </p>
+          </div>
+          <AIJobDescriptionWriter
+            formData={{
+              title: form.title,
+              companyName: company?.name || '',
+              location: form.location,
+              jobType: form.jobType,
+              workMode: form.workMode,
+              experienceLevel: form.experienceLevel,
+              category: form.category,
+              keySkills: form.skills,
+            }}
+            onInsert={(text) => {
+              const parsed = parseAIJobDescription(text)
+              setForm((f) => ({
+                ...f,
+                description: parsed.description || f.description,
+                responsibilities:
+                  parsed.responsibilities || f.responsibilities,
+                requirements: parsed.requirements || f.requirements,
+              }))
+            }}
+          />
+        </div>
+
         <Field label="About the role *">
           <textarea
             rows={5}
@@ -368,10 +460,18 @@ export default function EmployerPostJob() {
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/90 backdrop-blur-md">
         <div className="container-app py-3 flex items-center justify-end gap-3">
-          <button onClick={() => handleSave(false)} disabled={saving} className="btn-outline">
+          <button
+            onClick={() => handleSave(false)}
+            disabled={saving}
+            className="btn-outline"
+          >
             <Save size={16} /> Save as draft
           </button>
-          <button onClick={() => handleSave(true)} disabled={saving} className="btn-primary">
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving}
+            className="btn-primary"
+          >
             <Sparkles size={16} /> {saving ? 'Saving...' : 'Publish Job'}
           </button>
         </div>

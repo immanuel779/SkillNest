@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
   Users,
   Download,
   MessageSquare,
@@ -18,6 +16,7 @@ import {
   GitCompare,
   Square,
   CheckSquare,
+  ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -34,9 +33,19 @@ import { SkeletonList } from '../components/Skeletons'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ScorecardModal from '../components/ScorecardModal'
 import CompareScorecards from '../components/CompareScorecards'
+import SmartCandidateMatching from '../components/ai/SmartCandidateMatching'
 
 const PIPELINE = [
   { v: 'all', l: 'All' },
+  { v: 'applied', l: 'Applied' },
+  { v: 'under_review', l: 'Under Review' },
+  { v: 'shortlisted', l: 'Shortlisted' },
+  { v: 'interview', l: 'Interview' },
+  { v: 'hired', l: 'Hired' },
+  { v: 'rejected', l: 'Rejected' },
+]
+
+const STATUS_OPTIONS = [
   { v: 'applied', l: 'Applied' },
   { v: 'under_review', l: 'Under Review' },
   { v: 'shortlisted', l: 'Shortlisted' },
@@ -96,7 +105,6 @@ export default function EmployerJobApplicants() {
   const [busyId, setBusyId] = useState(null)
   const [scoreTarget, setScoreTarget] = useState(null)
 
-  // Comparison mode
   const [compareMode, setCompareMode] = useState(false)
   const [selected, setSelected] = useState([])
   const [showCompare, setShowCompare] = useState(false)
@@ -198,9 +206,9 @@ export default function EmployerJobApplicants() {
     navigate(`/employer/applications/${app.id}/interview`)
   }
 
-  const filtered = filter === 'all' ? apps : apps.filter((a) => a.status === filter)
+  const filtered =
+    filter === 'all' ? apps : apps.filter((a) => a.status === filter)
 
-  // Toggle selection for comparison (max 4)
   const toggleSelect = (app) => {
     setSelected((list) => {
       if (list.includes(app.id)) return list.filter((x) => x !== app.id)
@@ -212,7 +220,6 @@ export default function EmployerJobApplicants() {
     })
   }
 
-  // Candidates to show in compare modal
   const compareCandidates = useMemo(
     () =>
       selected
@@ -258,7 +265,6 @@ export default function EmployerJobApplicants() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Compare toggle */}
           {!compareMode && apps.length >= 2 && (
             <button
               onClick={() => {
@@ -296,7 +302,6 @@ export default function EmployerJobApplicants() {
             </>
           )}
 
-          {/* List/Board toggle */}
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
             <button
               onClick={() => {
@@ -338,7 +343,6 @@ export default function EmployerJobApplicants() {
         </div>
       )}
 
-      {/* Board view */}
       {view === 'board' && (
         <>
           {apps.length === 0 ? (
@@ -360,7 +364,6 @@ export default function EmployerJobApplicants() {
         </>
       )}
 
-      {/* List view */}
       {view === 'list' && (
         <>
           <div className="flex flex-wrap gap-2 mb-6">
@@ -389,9 +392,7 @@ export default function EmployerJobApplicants() {
           {filtered.length === 0 ? (
             <div className="card text-center py-16">
               <Users size={40} className="mx-auto text-gray-300 mb-3" />
-              <p className="font-semibold text-gray-700">
-                No applicants here
-              </p>
+              <p className="font-semibold text-gray-700">No applicants here</p>
               <p className="text-sm text-gray-500 mt-1">
                 Try a different filter.
               </p>
@@ -415,7 +416,6 @@ export default function EmployerJobApplicants() {
                   >
                     <div className="flex flex-col md:flex-row gap-5">
                       <div className="flex items-start gap-4 flex-1 min-w-0">
-                        {/* Selection checkbox in compare mode */}
                         {compareMode && (
                           <button
                             onClick={() => toggleSelect(a)}
@@ -453,6 +453,7 @@ export default function EmployerJobApplicants() {
                             </Link>
                             <AppStatus status={a.status} />
                             <ScoreBadge score={a.scorecardAvg} />
+                            <SmartCandidateMatching job={job} candidate={p} />
                           </div>
                           <p className="text-sm text-brand-700 font-medium">
                             {p.headline || '—'}
@@ -536,6 +537,7 @@ export default function EmployerJobApplicants() {
                               <Download size={14} /> Resume
                             </a>
                           )}
+
                           <button
                             onClick={() => messageApplicant(a)}
                             disabled={busy}
@@ -543,6 +545,7 @@ export default function EmployerJobApplicants() {
                           >
                             <MessageSquare size={14} /> Message
                           </button>
+
                           <button
                             onClick={() => messageWhatsApp(a)}
                             disabled={busy}
@@ -550,33 +553,40 @@ export default function EmployerJobApplicants() {
                           >
                             <MessageCircle size={14} /> WhatsApp
                           </button>
-                          <button
-                            onClick={() => setStatus(a, 'shortlisted')}
-                            disabled={busy}
-                            className="btn-outline !py-2 !px-3 text-sm !text-green-700 !border-green-200"
-                          >
-                            <CheckCircle2 size={14} /> Shortlist
-                          </button>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1 px-1">
+                              Status
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={a.status}
+                                disabled={busy}
+                                onChange={(e) => {
+                                  const next = e.target.value
+                                  if (next !== a.status) setStatus(a, next)
+                                }}
+                                className="w-full appearance-none rounded-lg border border-brand-300 bg-white px-3 py-2 pr-8 text-sm font-semibold text-brand-700 hover:bg-brand-50 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 cursor-pointer"
+                              >
+                                {STATUS_OPTIONS.map((s) => (
+                                  <option key={s.v} value={s.v}>
+                                    {s.l}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown
+                                size={14}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-brand-700"
+                              />
+                            </div>
+                          </div>
+
                           <button
                             onClick={() => scheduleInterview(a)}
                             disabled={busy}
                             className="btn-outline !py-2 !px-3 text-sm !text-purple-700 !border-purple-200"
                           >
                             <CalendarPlus size={14} /> Schedule
-                          </button>
-                          <button
-                            onClick={() => setStatus(a, 'hired')}
-                            disabled={busy}
-                            className="btn-outline !py-2 !px-3 text-sm !text-brand-700"
-                          >
-                            Hire
-                          </button>
-                          <button
-                            onClick={() => setStatus(a, 'rejected')}
-                            disabled={busy}
-                            className="btn-outline !py-2 !px-3 text-sm !text-red-600 !border-red-200"
-                          >
-                            <XCircle size={14} /> Reject
                           </button>
                         </div>
                       )}
@@ -589,7 +599,6 @@ export default function EmployerJobApplicants() {
         </>
       )}
 
-      {/* Scorecard modal */}
       {scoreTarget && (
         <ScorecardModal
           applicationId={scoreTarget.id}
@@ -605,7 +614,6 @@ export default function EmployerJobApplicants() {
         />
       )}
 
-      {/* Compare modal */}
       {showCompare && (
         <CompareScorecards
           candidates={compareCandidates}

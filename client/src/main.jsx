@@ -1,3 +1,21 @@
+// ============================================================
+// TEMP DEBUG — remove this whole block once the warnings are gone
+// ============================================================
+const _error = console.error
+console.error = (...args) => {
+  const first = args[0]
+  if (typeof first === 'string') {
+    if (first.includes('`value` prop on `input`')) {
+      console.trace('🐛 NULL VALUE WARNING — real stack below:')
+    }
+    if (first.includes('changing an uncontrolled input to be controlled')) {
+      console.trace('🐛 UNCONTROLLED → CONTROLLED WARNING — real stack below:')
+    }
+  }
+  _error(...args)
+}
+// ============================================================
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

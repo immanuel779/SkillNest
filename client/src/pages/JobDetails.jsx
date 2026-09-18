@@ -26,6 +26,7 @@ import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
 import { ensureConversation } from '../services/messageService'
 import { uploadDocument } from '../services/storageService'
 import ReportModal from '../components/ReportModal'
+import AICoverLetterAssist from '../components/ai/AICoverLetterAssist'
 import { friendlyError } from '../utils/errors'
 
 export default function JobDetails() {
@@ -69,7 +70,6 @@ export default function JobDetails() {
     }
   }, [id, user, profile?.role])
 
-  // Record a view once per signed-in user per job
   useEffect(() => {
     if (!job || !user) return
     recordJobView(job.id, user.uid, job.ownerId).catch(() => {})
@@ -359,7 +359,6 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // Extra attachments
   const [attachments, setAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef(null)
@@ -559,9 +558,16 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Cover letter */}
+          {/* Cover letter — with AI assist */}
           <div>
-            <label className="label">Cover letter (optional)</label>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <label className="label !mb-0">Cover letter (optional)</label>
+              <AICoverLetterAssist
+                job={job}
+                profile={profile}
+                onInsert={(text) => setCoverLetter(text)}
+              />
+            </div>
             <textarea
               rows={6}
               className="input resize-none"

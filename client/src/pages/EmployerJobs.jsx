@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { listMyJobs, updateJob, deleteJob } from '../services/jobService'
+import { countApplicationsByEmployer } from '../services/applicationService'
 
 function StatusBadge({ status }) {
   const styles = {
@@ -35,7 +36,30 @@ export default function EmployerJobs() {
   const load = async () => {
     if (!user) return
     try {
-      setJobs(await listMyJobs(user.uid))
+      const list = await listMyJobs(user.uid)
+
+      // Fetch REAL counts from the applications collection.
+      // Overrides the denormalized job.applicantCount, which may be
+      // stale or missing for older jobs.
+      let realCounts = {}
+      try {
+        realCounts = await countApplicationsByEmployer(
+          user.uid,
+          list.map((j) => j.id)
+        )
+      } catch (err) {
+        console.warn('Falling back to stored applicantCount:', err?.message)
+      }
+
+      setJobs(
+        list.map((j) => ({
+          ...j,
+          applicantCount:
+            typeof realCounts[j.id] === 'number'
+              ? realCounts[j.id]
+              : j.applicantCount || 0,
+        }))
+      )
     } catch (err) {
       setError(err.message)
     } finally {
@@ -74,13 +98,18 @@ export default function EmployerJobs() {
   }
 
   return (
-    <div className="container-app py-10">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container-app py-6 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-extrabold">My Jobs</h1>
-          <p className="text-gray-500 mt-1">Manage your job postings.</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold">My Jobs</h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">
+            Manage your job postings.
+          </p>
         </div>
-        <Link to="/employer/jobs/new" className="btn-primary">
+        <Link
+          to="/employer/jobs/new"
+          className="btn-primary w-full sm:w-auto justify-center"
+        >
           <Plus size={16} /> Post a job
         </Link>
       </div>
@@ -109,7 +138,9 @@ export default function EmployerJobs() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900">{j.title}</h3>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {j.title}
+                    </h3>
                     <StatusBadge status={j.status} />
                   </div>
                   <div className="mt-1 text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
@@ -117,7 +148,8 @@ export default function EmployerJobs() {
                       <MapPin size={12} /> {j.location || '—'}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Users size={12} /> {j.applicantCount || 0} applicants
+                      <Users size={12} /> {j.applicantCount || 0}{' '}
+                      {j.applicantCount === 1 ? 'applicant' : 'applicants'}
                     </span>
                     <span>
                       {j.jobType?.replace('_', ' ')} · {j.workMode}
