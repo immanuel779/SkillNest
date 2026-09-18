@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -15,12 +15,16 @@ import {
   AlertCircle,
   Flag,
   BadgeCheck,
+  Paperclip,
+  Trash2,
+  Loader2,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getJob, recordJobView } from '../services/jobService'
 import { hasApplied, createApplication } from '../services/applicationService'
 import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
 import { ensureConversation } from '../services/messageService'
+import { uploadDocument } from '../services/storageService'
 import ReportModal from '../components/ReportModal'
 import { friendlyError } from '../utils/errors'
 
@@ -355,6 +359,52 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  // Extra attachments
+  const [attachments, setAttachments] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const MAX_FILES = 5
+  const MAX_MB = 10
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    if (attachments.length + files.length > MAX_FILES) {
+      setError(`You can attach up to ${MAX_FILES} extra files.`)
+      return
+    }
+
+    setError('')
+    setUploading(true)
+    try {
+      const uploaded = []
+      for (const file of files) {
+        if (file.size > MAX_MB * 1024 * 1024) {
+          throw new Error(`${file.name} is over ${MAX_MB}MB.`)
+        }
+        const url = await uploadDocument(`applications/${user.uid}`, file)
+        uploaded.push({
+          name: file.name,
+          url,
+          size: file.size,
+          type: file.type || '',
+        })
+      }
+      setAttachments((list) => [...list, ...uploaded])
+    } catch (err) {
+      setError(friendlyError(err))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const removeAttachment = (url) => {
+    setAttachments((list) => list.filter((a) => a.url !== url))
+  }
+
   const handleSubmit = async () => {
     setError('')
     if (!resumeUrl) {
@@ -367,6 +417,7 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
         coverLetter,
         resumeUrl,
         resumeName: profile?.resumeName || '',
+        attachments,
       })
       onSuccess()
     } catch (err) {
@@ -374,6 +425,12 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const fmtSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   }
 
   return (
@@ -400,6 +457,7 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             </div>
           )}
 
+          {/* Resume */}
           <div>
             <label className="label">Resume</label>
             {resumeUrl ? (
@@ -430,6 +488,78 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             )}
           </div>
 
+          {/* Extra attachments */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="label !mb-0">Extra files (optional)</label>
+              <span className="text-[11px] text-gray-400">
+                {attachments.length} / {MAX_FILES}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || attachments.length >= MAX_FILES}
+              className="w-full rounded-xl border-2 border-dashed border-gray-300 hover:border-brand-400 hover:bg-brand-50/40 transition p-5 text-center disabled:opacity-50"
+            >
+              <div className="w-10 h-10 mx-auto rounded-xl bg-brand-50 flex items-center justify-center mb-2">
+                {uploading ? (
+                  <Loader2 size={18} className="text-brand-700 animate-spin" />
+                ) : (
+                  <Paperclip size={18} className="text-brand-700" />
+                )}
+              </div>
+              <p className="text-sm font-semibold text-gray-800">
+                {uploading
+                  ? 'Uploading...'
+                  : 'Add portfolio, certificate, or cover letter'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                PDF, DOC, PNG, JPG — max 10MB each
+              </p>
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+              onChange={handleFiles}
+              className="hidden"
+            />
+
+            {attachments.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {attachments.map((a) => (
+                  <li
+                    key={a.url}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50"
+                  >
+                    <Paperclip size={13} className="text-gray-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">
+                        {a.name}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {fmtSize(a.size)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a.url)}
+                      className="text-gray-400 hover:text-red-600 shrink-0 p-1"
+                      aria-label="Remove"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Cover letter */}
           <div>
             <label className="label">Cover letter (optional)</label>
             <textarea
@@ -448,7 +578,7 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || uploading}
             className="btn-primary"
           >
             <Send size={16} />{' '}

@@ -12,18 +12,24 @@ import {
   AlertCircle,
   BadgeCheck,
   Zap,
+  Star,
 } from 'lucide-react'
 import { getCompanyBySlug } from '../services/companyService'
 import { listPublishedJobs } from '../services/jobService'
+import { canReviewCompany, hasReviewed } from '../services/reviewService'
 import { friendlyError } from '../utils/errors'
+import { useAuth } from '../context/AuthContext'
 import CompanyFollowButton from '../components/company/CompanyFollowButton'
 import CompanyShareMenu from '../components/company/CompanyShareMenu'
 import CompanyUpdateFeed from '../components/company/CompanyUpdateFeed'
+import CompanyReviews from '../components/CompanyReviews'
+import ReviewModal from '../components/ReviewModal'
 
 const TABS = [
   { v: 'about', l: 'About' },
   { v: 'jobs', l: 'Jobs' },
   { v: 'updates', l: 'Updates' },
+  { v: 'reviews', l: 'Reviews' },
 ]
 
 function formatCount(n) {
@@ -35,12 +41,20 @@ function formatCount(n) {
 export default function CompanySpace() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const { user, profile } = useAuth()
+
   const [company, setCompany] = useState(null)
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('about')
   const [updateCount, setUpdateCount] = useState(0)
+
+  // Reviews state
+  const [reviewCount, setReviewCount] = useState(0)
+  const [showReview, setShowReview] = useState(false)
+  const [canReview, setCanReview] = useState(false)
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -73,6 +87,35 @@ export default function CompanySpace() {
       alive = false
     }
   }, [slug, navigate])
+
+  // Check review eligibility
+  useEffect(() => {
+    if (!company || !user || profile?.role !== 'job_seeker') {
+      setCanReview(false)
+      setAlreadyReviewed(false)
+      return
+    }
+    let alive = true
+    ;(async () => {
+      try {
+        const [can, done] = await Promise.all([
+          canReviewCompany(company.id, user.uid),
+          hasReviewed(company.id, user.uid),
+        ])
+        if (!alive) return
+        setCanReview(can)
+        setAlreadyReviewed(done)
+      } catch {
+        if (alive) {
+          setCanReview(false)
+          setAlreadyReviewed(false)
+        }
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [company, user, profile?.role])
 
   if (loading) {
     return (
@@ -206,12 +249,12 @@ export default function CompanySpace() {
       </div>
 
       {/* TABS */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
+      <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.v}
             onClick={() => setTab(t.v)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition ${
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition whitespace-nowrap ${
               tab === t.v
                 ? 'border-brand-700 text-brand-700'
                 : 'border-transparent text-gray-500 hover:text-brand-700'
@@ -226,6 +269,11 @@ export default function CompanySpace() {
             {t.v === 'updates' && updateCount > 0 && (
               <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
                 {updateCount}
+              </span>
+            )}
+            {t.v === 'reviews' && reviewCount > 0 && (
+              <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                {reviewCount}
               </span>
             )}
           </button>
@@ -394,6 +442,52 @@ export default function CompanySpace() {
           companyId={company.id}
           companyOwnerId={company.ownerId}
           onCountChange={setUpdateCount}
+        />
+      )}
+
+      {/* REVIEWS TAB */}
+      {tab === 'reviews' && (
+        <div>
+          {user && profile?.role === 'job_seeker' && (
+            <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm text-gray-500">
+                {canReview && !alreadyReviewed
+                  ? 'You interviewed here — share your experience.'
+                  : alreadyReviewed
+                  ? 'Thanks for leaving a review.'
+                  : 'Reviews come from candidates who reached the interview stage.'}
+              </p>
+              {canReview && !alreadyReviewed && (
+                <button
+                  onClick={() => setShowReview(true)}
+                  className="btn-primary !py-2 !px-4 text-sm"
+                >
+                  <Star size={14} /> Write a review
+                </button>
+              )}
+            </div>
+          )}
+
+          <CompanyReviews
+            companyId={company.id}
+            companyOwnerId={company.ownerId}
+            currentUserId={user?.uid}
+            canRespond={user?.uid === company.ownerId}
+            onCountChange={setReviewCount}
+          />
+        </div>
+      )}
+
+      {/* REVIEW MODAL */}
+      {showReview && company && user && (
+        <ReviewModal
+          company={company}
+          userId={user.uid}
+          onClose={() => setShowReview(false)}
+          onSubmitted={() => {
+            setAlreadyReviewed(true)
+            setReviewCount((c) => c + 1)
+          }}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Search,
   MapPin,
@@ -9,11 +9,13 @@ import {
   Bookmark,
   BookmarkCheck,
   BadgeCheck,
+  Save,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { listPublishedJobs } from '../services/jobService'
 import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
+import { createSavedSearch } from '../services/savedSearchService'
 import { SkeletonList } from '../components/Skeletons'
 import { friendlyError } from '../utils/errors'
 
@@ -57,23 +59,31 @@ const CATEGORIES = [
 export default function FindJobs() {
   const { user } = useAuth()
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const [jobs, setJobs] = useState([])
   const [savedMap, setSavedMap] = useState({})
   const [loading, setLoading] = useState(true)
 
-  const [q, setQ] = useState('')
-  const [location, setLocation] = useState('')
-  const [jobType, setJobType] = useState('')
-  const [workMode, setWorkMode] = useState('')
-  const [experienceLevel, setExperienceLevel] = useState('')
-  const [category, setCategory] = useState('')
+  const [q, setQ] = useState(searchParams.get('q') || '')
+  const [location, setLocation] = useState(searchParams.get('location') || '')
+  const [jobType, setJobType] = useState(searchParams.get('jobType') || '')
+  const [workMode, setWorkMode] = useState(searchParams.get('workMode') || '')
+  const [experienceLevel, setExperienceLevel] = useState(
+    searchParams.get('experienceLevel') || ''
+  )
+  const [category, setCategory] = useState(searchParams.get('category') || '')
   const [showFilters, setShowFilters] = useState(false)
+
+  const [showSave, setShowSave] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const [savingSearch, setSavingSearch] = useState(false)
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       try {
-        const list = await listPublishedJobs(100)
+        const list = await listPublishedJobs(200)
         if (!alive) return
         setJobs(list)
         if (user) {
@@ -93,6 +103,18 @@ export default function FindJobs() {
       alive = false
     }
   }, [user])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (q) next.set('q', q)
+    if (location) next.set('location', location)
+    if (jobType) next.set('jobType', jobType)
+    if (workMode) next.set('workMode', workMode)
+    if (experienceLevel) next.set('experienceLevel', experienceLevel)
+    if (category) next.set('category', category)
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, location, jobType, workMode, experienceLevel, category])
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -161,12 +183,45 @@ export default function FindJobs() {
     (experienceLevel ? 1 : 0) +
     (category ? 1 : 0)
 
+  const handleSaveSearch = async () => {
+    if (!user) {
+      toast.info('Sign in to save searches')
+      return
+    }
+    if (!saveName.trim()) {
+      toast.error('Give your search a name')
+      return
+    }
+    setSavingSearch(true)
+    try {
+      await createSavedSearch(user.uid, saveName, {
+        q,
+        location,
+        jobType,
+        workMode,
+        experienceLevel,
+        category,
+      })
+      toast.success('Search saved', "We'll notify you when new jobs match.")
+      setShowSave(false)
+      setSaveName('')
+    } catch (err) {
+      toast.error('Could not save search', friendlyError(err))
+    } finally {
+      setSavingSearch(false)
+    }
+  }
+
   return (
     <div className="container-app py-10">
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold">Find Jobs</h1>
         <p className="text-gray-500 mt-1">
-          {loading ? 'Loading roles...' : `${filtered.length} ${filtered.length === 1 ? 'role' : 'roles'} available`}
+          {loading
+            ? 'Loading roles...'
+            : `${filtered.length} ${
+                filtered.length === 1 ? 'role' : 'roles'
+              } available`}
         </p>
       </div>
 
@@ -175,6 +230,7 @@ export default function FindJobs() {
           <div className="flex items-center gap-2 px-3 py-2 flex-1 rounded-lg bg-gray-50">
             <Search size={18} className="text-brand-600 shrink-0" />
             <input
+              data-search-input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Job title, keyword, or skill"
@@ -201,6 +257,18 @@ export default function FindJobs() {
               </span>
             )}
           </button>
+
+          {user && activeFilters > 0 && (
+            <button
+              onClick={() => {
+                setSaveName('')
+                setShowSave(true)
+              }}
+              className="btn-outline"
+            >
+              <Save size={16} /> Save search
+            </button>
+          )}
         </div>
 
         {showFilters && (
@@ -359,6 +427,52 @@ export default function FindJobs() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {showSave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Save this search</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                We'll send you a notification when new jobs match.
+              </p>
+            </div>
+            <div className="p-5">
+              <label className="label">Name your search</label>
+              <input
+                className="input"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                placeholder="e.g. Remote React jobs"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveSearch()}
+              />
+              {activeFilters > 0 && (
+                <div className="mt-3 text-xs text-gray-500">
+                  Saving {activeFilters} active{' '}
+                  {activeFilters === 1 ? 'filter' : 'filters'}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 p-5 border-t border-gray-100">
+              <button
+                onClick={() => setShowSave(false)}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSearch}
+                disabled={savingSearch || !saveName.trim()}
+                className="btn-primary"
+              >
+                <Save size={16} />
+                {savingSearch ? 'Saving...' : 'Save search'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

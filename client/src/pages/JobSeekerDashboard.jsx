@@ -11,15 +11,19 @@ import { useAuth } from '../context/AuthContext'
 import { listMyApplications } from '../services/applicationService'
 import { listMySavedJobs } from '../services/savedJobService'
 import { listMyInterviews } from '../services/interviewService'
+import { getProfile } from '../services/profileService'
+import ProfileCompletenessCard from '../components/ProfileCompletenessCard'
+import { SkeletonStatCard } from '../components/Skeletons'
 
 export default function JobSeekerDashboard() {
-  const { user, profile } = useAuth()
+  const { user, profile: authProfile } = useAuth()
   const [stats, setStats] = useState({
     applications: 0,
     saved: 0,
     interviews: 0,
     shortlisted: 0,
   })
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,10 +31,11 @@ export default function JobSeekerDashboard() {
     ;(async () => {
       if (!user) return
       try {
-        const [apps, saved, interviews] = await Promise.all([
+        const [apps, saved, interviews, profileDoc] = await Promise.all([
           listMyApplications(user.uid),
           listMySavedJobs(user.uid),
           listMyInterviews(user.uid, 'job_seeker'),
+          getProfile(user.uid),
         ])
         if (!alive) return
 
@@ -44,6 +49,7 @@ export default function JobSeekerDashboard() {
           interviews: upcomingInterviews,
           shortlisted: apps.filter((a) => a.status === 'shortlisted').length,
         })
+        setProfile(profileDoc)
       } finally {
         if (alive) setLoading(false)
       }
@@ -66,7 +72,7 @@ export default function JobSeekerDashboard() {
         <div>
           <h1 className="text-3xl font-extrabold">Dashboard</h1>
           <p className="text-gray-500 mt-1">
-            Welcome back, {profile?.fullName || user?.email}.
+            Welcome back, {authProfile?.fullName || user?.email}.
           </p>
         </div>
         <Link to="/jobs" className="btn-primary">
@@ -74,36 +80,44 @@ export default function JobSeekerDashboard() {
         </Link>
       </div>
 
+      {/* Stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((c) => (
-          <div key={c.label} className="card">
-            <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
-                c.color === 'brand'
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'bg-accent-50 text-accent-600'
-              }`}
-            >
-              <c.icon size={18} />
-            </div>
-            <div className="text-sm text-gray-500">{c.label}</div>
-            <div className="text-3xl font-extrabold mt-1">
-              {loading ? '—' : c.value}
-            </div>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonStatCard key={i} />
+            ))
+          : cards.map((c) => (
+              <div key={c.label} className="card">
+                <div
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
+                    c.color === 'brand'
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'bg-accent-50 text-accent-600'
+                  }`}
+                >
+                  <c.icon size={18} />
+                </div>
+                <div className="text-sm text-gray-500">{c.label}</div>
+                <div className="text-3xl font-extrabold mt-1">{c.value}</div>
+              </div>
+            ))}
       </div>
 
+      {/* Profile completeness + Track applications */}
       <div className="mt-10 grid md:grid-cols-2 gap-6">
-        <div className="card">
-          <h2 className="text-lg font-bold mb-2">Complete your profile</h2>
-          <p className="text-sm text-gray-500 mb-5">
-            Employers are more likely to shortlist candidates with complete profiles.
-          </p>
-          <Link to="/profile/job-seeker" className="btn-outline w-full">
-            Edit profile
-          </Link>
-        </div>
+        {loading ? (
+          <div className="card">
+            <div className="h-4 w-32 animate-pulse rounded-md bg-gray-200 mb-4" />
+            <div className="h-2.5 rounded-full bg-gray-100 mb-4" />
+            <div className="space-y-2">
+              <div className="h-3 w-3/4 animate-pulse rounded-md bg-gray-200" />
+              <div className="h-3 w-2/3 animate-pulse rounded-md bg-gray-200" />
+            </div>
+          </div>
+        ) : (
+          <ProfileCompletenessCard profile={profile} />
+        )}
+
         <div className="card">
           <h2 className="text-lg font-bold mb-2">Track your applications</h2>
           <p className="text-sm text-gray-500 mb-5">
@@ -112,6 +126,33 @@ export default function JobSeekerDashboard() {
           <Link to="/applications" className="btn-outline w-full">
             View applications
           </Link>
+
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">
+              Keep the momentum going
+            </h3>
+            <ul className="text-sm text-gray-600 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-brand-600 mt-0.5">·</span>
+                <span>
+                  Save a search from{' '}
+                  <Link
+                    to="/jobs"
+                    className="text-brand-700 font-semibold hover:underline"
+                  >
+                    Find Jobs
+                  </Link>{' '}
+                  to get alerts when new roles match.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-600 mt-0.5">·</span>
+                <span>
+                  Follow companies from their space to hear about new roles.
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

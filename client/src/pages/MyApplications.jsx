@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, Building2, Calendar, AlertCircle } from 'lucide-react'
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  AlertCircle,
+  ArrowRight,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { listMyApplications } from '../services/applicationService'
 import { SkeletonList } from '../components/Skeletons'
@@ -64,7 +70,9 @@ export default function MyApplications() {
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold">My Applications</h1>
         <p className="text-gray-500 mt-1">
-          {loading ? 'Loading...' : `Track every application you've sent.`}
+          {loading
+            ? 'Loading...'
+            : 'Tap any application to see the full timeline.'}
         </p>
       </div>
 
@@ -121,45 +129,53 @@ export default function MyApplications() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filtered.map((a) => (
-            <div key={a.id} className="card">
-              <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {a.jobTitle}
-                    </h3>
-                    <StatusBadge status={a.status} />
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                    <span className="inline-flex items-center gap-1">
-                      <Building2 size={12} /> {a.companyName}
-                    </span>
-                    {a.createdAt?.seconds && (
+          {filtered.map((a) => {
+            const stages = a.statusHistory?.length || 1
+            return (
+              <Link
+                key={a.id}
+                to={`/applications/${a.id}`}
+                className="card card-hover block group"
+              >
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
+                        {a.jobTitle}
+                      </h3>
+                      <StatusBadge status={a.status} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                       <span className="inline-flex items-center gap-1">
-                        <Calendar size={12} />
-                        Applied{' '}
-                        {new Date(
-                          a.createdAt.seconds * 1000
-                        ).toLocaleDateString()}
+                        <Building2 size={12} /> {a.companyName}
                       </span>
+                      {a.createdAt?.seconds && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar size={12} />
+                          Applied{' '}
+                          {new Date(
+                            a.createdAt.seconds * 1000
+                          ).toLocaleDateString()}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-gray-400">
+                        {stages} {stages === 1 ? 'stage' : 'stages'}
+                      </span>
+                    </div>
+                    {a.coverLetter && (
+                      <p className="mt-3 text-sm text-gray-600 line-clamp-2">
+                        {a.coverLetter}
+                      </p>
                     )}
                   </div>
-                  {a.coverLetter && (
-                    <p className="mt-3 text-sm text-gray-600 line-clamp-2">
-                      {a.coverLetter}
-                    </p>
-                  )}
+                  <span className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform shrink-0">
+                    View timeline
+                    <ArrowRight size={12} />
+                  </span>
                 </div>
-                <Link
-                  to={`/jobs/${a.jobId}`}
-                  className="btn-outline !py-2 !px-3 text-sm shrink-0"
-                >
-                  View job
-                </Link>
-              </div>
-            </div>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@custom-variant dark (&:where(.dark, .dark *));
 /* =========================================
    SkillNest Brand Theme (Tailwind v4)
    ========================================= */
@@ -335,4 +335,120 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+/* =========================================
+   Dark mode overrides
+   ========================================= */
+.dark body {
+  background-color: #0b0b12;
+  color: #e5e7eb;
+}
+
+.dark h1, .dark h2, .dark h3,
+.dark h4, .dark h5, .dark h6 {
+  color: #f9fafb;
+}
+
+.dark .card {
+  background-color: #15151f;
+  border-color: #23232f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dark .card-hover:hover {
+  border-color: #3b3b4d;
+  box-shadow:
+    0 20px 40px -12px rgba(124, 58, 237, 0.25),
+    0 0 0 1px rgba(139, 92, 246, 0.15);
+}
+
+.dark .glass {
+  background: rgba(15, 15, 24, 0.75);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .input {
+  background-color: #0f0f18;
+  border-color: #2a2a38;
+  color: #f3f4f6;
+}
+
+.dark .input::placeholder {
+  color: #6b7280;
+}
+
+.dark .label {
+  color: #d1d5db;
+}
+
+.dark .btn-outline {
+  background-color: transparent;
+  border-color: #2a2a38;
+  color: #d1d5db;
+}
+
+.dark .btn-outline:hover {
+  background-color: #1b1b26;
+  border-color: var(--color-brand-500);
+  color: #a78bfa;
+}
+
+.dark .btn-ghost {
+  color: #9ca3af;
+}
+
+.dark .btn-ghost:hover {
+  color: #a78bfa;
+  background-color: #1b1b26;
+}
+
+.dark .badge.bg-gray-100 {
+  background-color: #1f1f2c;
+  color: #cbd5e1;
+}
+
+.dark .bg-gray-50 {
+  background-color: #0f0f18;
+}
+
+.dark .bg-gray-100 {
+  background-color: #18181f;
+}
+
+.dark .bg-white {
+  background-color: #15151f;
+}
+
+.dark .bg-gray-50\/40 {
+  background-color: rgba(15, 15, 24, 0.4);
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  border-color: #23232f;
+}
+
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #23232f;
+}
+
+.dark .text-gray-900 { color: #f9fafb; }
+.dark .text-gray-800 { color: #e5e7eb; }
+.dark .text-gray-700 { color: #d1d5db; }
+.dark .text-gray-600 { color: #9ca3af; }
+.dark .text-gray-500 { color: #8b92a4; }
+.dark .text-gray-400 { color: #6b7280; }
+
+/* Inputs inside tables and modals */
+.dark table thead {
+  background-color: #18181f;
+}
+
+.dark table tbody tr:hover {
+  background-color: #1b1b26;
+}
+
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 }

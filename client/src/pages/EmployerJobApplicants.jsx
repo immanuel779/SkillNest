@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -10,6 +10,14 @@ import {
   CalendarPlus,
   MessageCircle,
   User,
+  LayoutGrid,
+  List,
+  Star,
+  Paperclip,
+  ExternalLink,
+  GitCompare,
+  Square,
+  CheckSquare,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -23,6 +31,9 @@ import { ensureConversation } from '../services/messageService'
 import { openWhatsApp } from '../utils/whatsapp'
 import { friendlyError } from '../utils/errors'
 import { SkeletonList } from '../components/Skeletons'
+import KanbanBoard from '../components/kanban/KanbanBoard'
+import ScorecardModal from '../components/ScorecardModal'
+import CompareScorecards from '../components/CompareScorecards'
 
 const PIPELINE = [
   { v: 'all', l: 'All' },
@@ -50,6 +61,25 @@ function AppStatus({ status }) {
   )
 }
 
+function ScoreBadge({ score }) {
+  if (typeof score !== 'number') return null
+  const color =
+    score >= 4
+      ? 'bg-green-50 text-green-700 border-green-100'
+      : score >= 3
+      ? 'bg-yellow-50 text-yellow-700 border-yellow-100'
+      : 'bg-red-50 text-red-700 border-red-100'
+  return (
+    <span
+      className={`badge ${color} inline-flex items-center gap-1 font-bold`}
+      title="Internal scorecard average"
+    >
+      <Star size={10} className="fill-current" />
+      {score.toFixed(1)}
+    </span>
+  )
+}
+
 export default function EmployerJobApplicants() {
   const { id: jobId } = useParams()
   const { user } = useAuth()
@@ -61,8 +91,15 @@ export default function EmployerJobApplicants() {
   const [profiles, setProfiles] = useState({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [view, setView] = useState('list')
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [scoreTarget, setScoreTarget] = useState(null)
+
+  // Comparison mode
+  const [compareMode, setCompareMode] = useState(false)
+  const [selected, setSelected] = useState([])
+  const [showCompare, setShowCompare] = useState(false)
 
   const load = async () => {
     if (!user) return
@@ -102,14 +139,20 @@ export default function EmployerJobApplicants() {
 
   const setStatus = async (app, status) => {
     setBusyId(app.id)
+    setApps((list) =>
+      list.map((a) => (a.id === app.id ? { ...a, status } : a))
+    )
     try {
       await updateApplicationStatus(app.id, status)
       toast.success(
-        `Marked as ${status.replace('_', ' ')}`,
+        `Moved to ${status.replace('_', ' ')}`,
         'The candidate has been notified.'
       )
       await load()
     } catch (err) {
+      setApps((list) =>
+        list.map((a) => (a.id === app.id ? { ...a, status: app.status } : a))
+      )
       toast.error('Could not update', friendlyError(err))
     } finally {
       setBusyId(null)
@@ -148,7 +191,6 @@ export default function EmployerJobApplicants() {
       window.open(url, '_blank', 'noopener')
       return
     }
-
     openWhatsApp(p.phone, text)
   }
 
@@ -157,6 +199,34 @@ export default function EmployerJobApplicants() {
   }
 
   const filtered = filter === 'all' ? apps : apps.filter((a) => a.status === filter)
+
+  // Toggle selection for comparison (max 4)
+  const toggleSelect = (app) => {
+    setSelected((list) => {
+      if (list.includes(app.id)) return list.filter((x) => x !== app.id)
+      if (list.length >= 4) {
+        toast.info('You can compare up to 4 candidates')
+        return list
+      }
+      return [...list, app.id]
+    })
+  }
+
+  // Candidates to show in compare modal
+  const compareCandidates = useMemo(
+    () =>
+      selected
+        .map((id) => {
+          const application = apps.find((a) => a.id === id)
+          if (!application) return null
+          return {
+            application,
+            profile: profiles[application.applicantId] || {},
+          }
+        })
+        .filter(Boolean),
+    [selected, apps, profiles]
+  )
 
   if (loading) {
     return (
@@ -179,10 +249,82 @@ export default function EmployerJobApplicants() {
         <ArrowLeft size={14} /> Back to jobs
       </button>
 
-      <h1 className="text-3xl font-extrabold mb-1">Applicants</h1>
-      <p className="text-gray-500 mb-8">
-        {job?.title} · {apps.length} total
-      </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+        <div>
+          <h1 className="text-3xl font-extrabold mb-1">Applicants</h1>
+          <p className="text-gray-500">
+            {job?.title} · {apps.length} total
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Compare toggle */}
+          {!compareMode && apps.length >= 2 && (
+            <button
+              onClick={() => {
+                setCompareMode(true)
+                setView('list')
+                setSelected([])
+              }}
+              className="btn-outline"
+            >
+              <GitCompare size={14} /> Compare
+            </button>
+          )}
+
+          {compareMode && (
+            <>
+              <span className="text-xs font-semibold text-gray-600 hidden sm:inline">
+                {selected.length} / 4 selected
+              </span>
+              <button
+                onClick={() => setShowCompare(true)}
+                disabled={selected.length < 2}
+                className="btn-primary disabled:opacity-50"
+              >
+                <GitCompare size={14} /> Compare ({selected.length})
+              </button>
+              <button
+                onClick={() => {
+                  setCompareMode(false)
+                  setSelected([])
+                }}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+
+          {/* List/Board toggle */}
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+            <button
+              onClick={() => {
+                setView('board')
+                setCompareMode(false)
+                setSelected([])
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition ${
+                view === 'board'
+                  ? 'bg-brand-700 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <LayoutGrid size={13} /> Board
+            </button>
+            <button
+              onClick={() => setView('list')}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition ${
+                view === 'list'
+                  ? 'bg-brand-700 text-white'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <List size={13} /> List
+            </button>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-6 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
@@ -196,164 +338,282 @@ export default function EmployerJobApplicants() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {PIPELINE.map((p) => {
-          const count =
-            p.v === 'all'
-              ? apps.length
-              : apps.filter((a) => a.status === p.v).length
-          const active = filter === p.v
-          return (
-            <button
-              key={p.v}
-              onClick={() => setFilter(p.v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
-                active
-                  ? 'bg-brand-700 text-white border-brand-700'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300'
-              }`}
-            >
-              {p.l} <span className="opacity-70">({count})</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Board view */}
+      {view === 'board' && (
+        <>
+          {apps.length === 0 ? (
+            <div className="card text-center py-16">
+              <Users size={40} className="mx-auto text-gray-300 mb-3" />
+              <p className="font-semibold text-gray-700">No applicants yet</p>
+              <p className="text-sm text-gray-500 mt-1">
+                When candidates apply, they&apos;ll show up here.
+              </p>
+            </div>
+          ) : (
+            <KanbanBoard
+              apps={apps}
+              profiles={profiles}
+              onStatusChange={setStatus}
+              busyId={busyId}
+            />
+          )}
+        </>
+      )}
 
-      {filtered.length === 0 ? (
-        <div className="card text-center py-16">
-          <Users size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-semibold text-gray-700">No applicants yet</p>
-          <p className="text-sm text-gray-500 mt-1">
-            When candidates apply, they&apos;ll show up here.
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {filtered.map((a) => {
-            const p = profiles[a.applicantId] || {}
-            const busy = busyId === a.id
-            return (
-              <div key={a.id} className="card">
-                <div className="flex flex-col md:flex-row gap-5">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden">
-                      {p.photoURL ? (
-                        <img
-                          src={p.photoURL}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        p.fullName?.[0] || '?'
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          to={`/applicants/${a.applicantId}`}
-                          className="font-bold text-gray-900 hover:text-brand-700 hover:underline"
-                        >
-                          {p.fullName || 'Candidate'}
-                        </Link>
-                        <AppStatus status={a.status} />
-                      </div>
-                      <p className="text-sm text-brand-700 font-medium">
-                        {p.headline || '—'}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {p.location || ''}
-                        {p.phone && <span className="ml-2">· {p.phone}</span>}
-                      </p>
+      {/* List view */}
+      {view === 'list' && (
+        <>
+          <div className="flex flex-wrap gap-2 mb-6">
+            {PIPELINE.map((p) => {
+              const count =
+                p.v === 'all'
+                  ? apps.length
+                  : apps.filter((a) => a.status === p.v).length
+              const active = filter === p.v
+              return (
+                <button
+                  key={p.v}
+                  onClick={() => setFilter(p.v)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                    active
+                      ? 'bg-brand-700 text-white border-brand-700'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300'
+                  }`}
+                >
+                  {p.l} <span className="opacity-70">({count})</span>
+                </button>
+              )
+            })}
+          </div>
 
-                      {p.skills && p.skills.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {p.skills.slice(0, 6).map((s) => {
-                            const label = typeof s === 'string' ? s : s.name
-                            return (
-                              <span
-                                key={label}
-                                className="text-[11px] bg-brand-50 text-brand-700 border border-brand-100 rounded-md px-2 py-0.5"
-                              >
-                                {label}
+          {filtered.length === 0 ? (
+            <div className="card text-center py-16">
+              <Users size={40} className="mx-auto text-gray-300 mb-3" />
+              <p className="font-semibold text-gray-700">
+                No applicants here
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Try a different filter.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {filtered.map((a) => {
+                const p = profiles[a.applicantId] || {}
+                const busy = busyId === a.id
+                const attachments = a.attachments || []
+                const isSelected = selected.includes(a.id)
+
+                return (
+                  <div
+                    key={a.id}
+                    className={`card transition ${
+                      compareMode && isSelected
+                        ? 'ring-2 ring-brand-500 border-brand-300'
+                        : ''
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row gap-5">
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
+                        {/* Selection checkbox in compare mode */}
+                        {compareMode && (
+                          <button
+                            onClick={() => toggleSelect(a)}
+                            className="shrink-0 mt-1 text-brand-700 hover:text-brand-800 transition"
+                            aria-label={
+                              isSelected ? 'Deselect' : 'Select for comparison'
+                            }
+                          >
+                            {isSelected ? (
+                              <CheckSquare size={22} />
+                            ) : (
+                              <Square size={22} className="text-gray-300" />
+                            )}
+                          </button>
+                        )}
+
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden">
+                          {p.photoURL ? (
+                            <img
+                              src={p.photoURL}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            p.fullName?.[0] || '?'
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link
+                              to={`/applicants/${a.applicantId}`}
+                              className="font-bold text-gray-900 hover:text-brand-700 hover:underline"
+                            >
+                              {p.fullName || 'Candidate'}
+                            </Link>
+                            <AppStatus status={a.status} />
+                            <ScoreBadge score={a.scorecardAvg} />
+                          </div>
+                          <p className="text-sm text-brand-700 font-medium">
+                            {p.headline || '—'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {p.location || ''}
+                            {p.phone && (
+                              <span className="ml-2">· {p.phone}</span>
+                            )}
+                          </p>
+
+                          {p.skills && p.skills.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {p.skills.slice(0, 6).map((s) => {
+                                const label =
+                                  typeof s === 'string' ? s : s.name
+                                return (
+                                  <span
+                                    key={label}
+                                    className="text-[11px] bg-brand-50 text-brand-700 border border-brand-100 rounded-md px-2 py-0.5"
+                                  >
+                                    {label}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {attachments.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500">
+                                <Paperclip size={11} /> Attachments:
                               </span>
-                            )
-                          })}
+                              {attachments.map((at) => (
+                                <a
+                                  key={at.url}
+                                  href={at.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 bg-brand-50 border border-brand-100 rounded-md px-2 py-0.5 hover:bg-brand-100 transition"
+                                >
+                                  {at.name?.slice(0, 22) || 'File'}
+                                  <ExternalLink size={9} />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {a.coverLetter && (
+                            <p className="mt-3 text-sm text-gray-600 line-clamp-3">
+                              {a.coverLetter}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {!compareMode && (
+                        <div className="flex flex-wrap md:flex-col gap-2 md:w-56 shrink-0">
+                          <Link
+                            to={`/applicants/${a.applicantId}`}
+                            className="btn-outline !py-2 !px-3 text-sm"
+                          >
+                            <User size={14} /> View Profile
+                          </Link>
+
+                          <button
+                            onClick={() => setScoreTarget(a)}
+                            className="btn-outline !py-2 !px-3 text-sm !text-accent-600 !border-accent-200"
+                          >
+                            <Star size={14} />{' '}
+                            {a.scorecardAvg ? 'Edit scorecard' : 'Score'}
+                          </button>
+
+                          {(a.resumeUrl || p.resumeUrl) && (
+                            <a
+                              href={a.resumeUrl || p.resumeUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn-outline !py-2 !px-3 text-sm"
+                            >
+                              <Download size={14} /> Resume
+                            </a>
+                          )}
+                          <button
+                            onClick={() => messageApplicant(a)}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm"
+                          >
+                            <MessageSquare size={14} /> Message
+                          </button>
+                          <button
+                            onClick={() => messageWhatsApp(a)}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm !text-green-700 !border-green-200"
+                          >
+                            <MessageCircle size={14} /> WhatsApp
+                          </button>
+                          <button
+                            onClick={() => setStatus(a, 'shortlisted')}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm !text-green-700 !border-green-200"
+                          >
+                            <CheckCircle2 size={14} /> Shortlist
+                          </button>
+                          <button
+                            onClick={() => scheduleInterview(a)}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm !text-purple-700 !border-purple-200"
+                          >
+                            <CalendarPlus size={14} /> Schedule
+                          </button>
+                          <button
+                            onClick={() => setStatus(a, 'hired')}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm !text-brand-700"
+                          >
+                            Hire
+                          </button>
+                          <button
+                            onClick={() => setStatus(a, 'rejected')}
+                            disabled={busy}
+                            className="btn-outline !py-2 !px-3 text-sm !text-red-600 !border-red-200"
+                          >
+                            <XCircle size={14} /> Reject
+                          </button>
                         </div>
                       )}
-
-                      {a.coverLetter && (
-                        <p className="mt-3 text-sm text-gray-600 line-clamp-3">
-                          {a.coverLetter}
-                        </p>
-                      )}
                     </div>
                   </div>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
 
-                  <div className="flex flex-wrap md:flex-col gap-2 md:w-56 shrink-0">
-                    <Link
-                      to={`/applicants/${a.applicantId}`}
-                      className="btn-outline !py-2 !px-3 text-sm"
-                    >
-                      <User size={14} /> View Profile
-                    </Link>
-                    {(a.resumeUrl || p.resumeUrl) && (
-                      <a
-                        href={a.resumeUrl || p.resumeUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-outline !py-2 !px-3 text-sm"
-                      >
-                        <Download size={14} /> Resume
-                      </a>
-                    )}
-                    <button
-                      onClick={() => messageApplicant(a)}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm"
-                    >
-                      <MessageSquare size={14} /> Message
-                    </button>
-                    <button
-                      onClick={() => messageWhatsApp(a)}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm !text-green-700 !border-green-200"
-                    >
-                      <MessageCircle size={14} /> WhatsApp
-                    </button>
-                    <button
-                      onClick={() => setStatus(a, 'shortlisted')}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm !text-green-700 !border-green-200"
-                    >
-                      <CheckCircle2 size={14} /> Shortlist
-                    </button>
-                    <button
-                      onClick={() => scheduleInterview(a)}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm !text-purple-700 !border-purple-200"
-                    >
-                      <CalendarPlus size={14} /> Schedule
-                    </button>
-                    <button
-                      onClick={() => setStatus(a, 'hired')}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm !text-brand-700"
-                    >
-                      Hire
-                    </button>
-                    <button
-                      onClick={() => setStatus(a, 'rejected')}
-                      disabled={busy}
-                      className="btn-outline !py-2 !px-3 text-sm !text-red-600 !border-red-200"
-                    >
-                      <XCircle size={14} /> Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+      {/* Scorecard modal */}
+      {scoreTarget && (
+        <ScorecardModal
+          applicationId={scoreTarget.id}
+          candidateName={
+            profiles[scoreTarget.applicantId]?.fullName || 'Candidate'
+          }
+          existing={scoreTarget.scorecard}
+          onClose={() => setScoreTarget(null)}
+          onSaved={() => {
+            toast.success('Scorecard saved')
+            load()
+          }}
+        />
+      )}
+
+      {/* Compare modal */}
+      {showCompare && (
+        <CompareScorecards
+          candidates={compareCandidates}
+          onClose={() => setShowCompare(false)}
+          onRemove={(id) =>
+            setSelected((list) => list.filter((x) => x !== id))
+          }
+        />
       )}
     </div>
   )

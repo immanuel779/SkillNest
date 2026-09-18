@@ -124,6 +124,7 @@ export default function Companies() {
           <div className="flex items-center gap-2 px-3 py-2 flex-1 rounded-lg bg-gray-50">
             <Search size={18} className="text-brand-600 shrink-0" />
             <input
+              data-search-input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by name, industry, or location..."

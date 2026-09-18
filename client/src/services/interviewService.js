@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { createNotification } from './notificationService'
+import { sendEmail } from './emailService'
 
 const sortByDateAsc = (arr) =>
   [...arr].sort((a, b) => {
@@ -30,7 +31,7 @@ export async function createInterview(app, employer, data) {
     candidateEmail: app.applicantEmail || '',
     employerId: employer.uid,
     employerName: employer.fullName || employer.email || '',
-    scheduledAt: data.scheduledAt, // ISO string → we store as Firestore Timestamp
+    scheduledAt: data.scheduledAt,
     durationMin: Number(data.durationMin) || 30,
     meetingLink: data.meetingLink || '',
     notes: data.notes || '',
@@ -39,22 +40,58 @@ export async function createInterview(app, employer, data) {
     updatedAt: serverTimestamp(),
   })
 
-  // Notify candidate
-  await createNotification({
-    userId: app.applicantId,
-    type: 'interview',
-    title: 'Interview scheduled',
-    body: `${employer.fullName || 'The employer'} scheduled an interview for "${app.jobTitle}".`,
-    link: '/interviews',
-  })
+  // In-app notification to candidate
+  try {
+    await createNotification({
+      userId: app.applicantId,
+      type: 'interview',
+      title: 'Interview scheduled',
+      body: `${employer.fullName || 'The employer'} scheduled an interview for "${app.jobTitle}".`,
+      link: '/interviews',
+    })
+  } catch {
+    /* best-effort */
+  }
+
+  // Email the candidate
+  try {
+    const candidateSnap = await getDoc(doc(db, 'users', app.applicantId))
+    const candidateEmail = candidateSnap.exists()
+      ? candidateSnap.data().email
+      : app.applicantEmail
+    if (candidateEmail) {
+      const when = data.scheduledAt
+        ? new Date(data.scheduledAt).toLocaleString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : ''
+      sendEmail('interview_scheduled', candidateEmail, {
+        jobTitle: app.jobTitle,
+        companyName: app.companyName,
+        whenText: when,
+        durationMin: data.durationMin || 30,
+        meetingLink: data.meetingLink || '',
+      }).catch(() => {})
+    }
+  } catch {
+    /* best-effort */
+  }
 
   // Update application status to 'interview' (only if not already hired/rejected)
-  if (['applied', 'under_review', 'shortlisted'].includes(app.status)) {
-    const appRef = doc(db, 'applications', app.id)
-    await updateDoc(appRef, {
-      status: 'interview',
-      updatedAt: serverTimestamp(),
-    })
+  try {
+    if (['applied', 'under_review', 'shortlisted'].includes(app.status)) {
+      const appRef = doc(db, 'applications', app.id)
+      await updateDoc(appRef, {
+        status: 'interview',
+        updatedAt: serverTimestamp(),
+      })
+    }
+  } catch {
+    /* best-effort */
   }
 
   return ref.id

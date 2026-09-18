@@ -11,7 +11,9 @@ import JobSeekerProfile from './pages/JobSeekerProfile'
 import FindJobs from './pages/FindJobs'
 import JobDetails from './pages/JobDetails'
 import MyApplications from './pages/MyApplications'
+import ApplicationTimeline from './pages/ApplicationTimeline'
 import SavedJobs from './pages/SavedJobs'
+import MySearches from './pages/MySearches'
 import EmployerDashboard from './pages/EmployerDashboard'
 import EmployerCompanyProfile from './pages/EmployerCompanyProfile'
 import EmployerPostJob from './pages/EmployerPostJob'
@@ -20,6 +22,9 @@ import EmployerJobApplicants from './pages/EmployerJobApplicants'
 import EmployerScheduleInterview from './pages/EmployerScheduleInterview'
 import EmployerInterviews from './pages/EmployerInterviews'
 import EmployerUpdates from './pages/EmployerUpdates'
+import EmployerAnalytics from './pages/EmployerAnalytics'
+import EmployerTeam from './pages/EmployerTeam'
+import AcceptInvite from './pages/AcceptInvite'
 import JobSeekerInterviews from './pages/JobSeekerInterviews'
 import InterviewDetails from './pages/InterviewDetails'
 import Messages from './pages/Messages'
@@ -44,17 +49,21 @@ import Terms from './pages/Terms'
 import Security from './pages/Security'
 import CompanySpace from './pages/CompanySpace'
 import CompanyLegacyRedirect from './pages/CompanyLegacyRedirect'
-import { useInterviewReminders } from './hooks/useInterviewReminders'
 import AccountSettings from './pages/AccountSettings'
 import Companies from './pages/Companies'
-import EmployerAnalytics from './pages/EmployerAnalytics'
+import { useInterviewReminders } from './hooks/useInterviewReminders'
+import { useJobAlerts } from './hooks/useJobAlerts'
 
 function App() {
   useInterviewReminders()
+  useJobAlerts()
 
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
+        {/* ============================
+            PUBLIC
+            ============================ */}
         <Route index element={<Landing />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
@@ -63,27 +72,11 @@ function App() {
         <Route path="jobs" element={<FindJobs />} />
         <Route path="jobs/:id" element={<JobDetails />} />
         <Route path="companies" element={<Companies />} />
-        <Route
-  path="employer/analytics"
-  element={
-    <ProtectedRoute allowRoles={['employer']}>
-      <EmployerAnalytics />
-    </ProtectedRoute>
-  }
-/>
-
-        {/* Public company space */}
         <Route path="c/:slug" element={<CompanySpace />} />
-        {/* Legacy /companies/:id → redirects to /c/:slug */}
         <Route path="companies/:id" element={<CompanyLegacyRedirect />} />
-        <Route
-  path="settings"
-  element={
-    <ProtectedRoute>
-      <AccountSettings />
-    </ProtectedRoute>
-  }
-/>
+
+        {/* Accept team invite — public so invited users can sign in first */}
+        <Route path="accept-invite/:token" element={<AcceptInvite />} />
 
         {/* Static pages */}
         <Route path="about" element={<About />} />
@@ -97,7 +90,9 @@ function App() {
         <Route path="terms" element={<Terms />} />
         <Route path="security" element={<Security />} />
 
-        {/* Job seeker */}
+        {/* ============================
+            JOB SEEKER
+            ============================ */}
         <Route
           path="dashboard/job-seeker"
           element={
@@ -123,10 +118,26 @@ function App() {
           }
         />
         <Route
+          path="applications/:id"
+          element={
+            <ProtectedRoute allowRoles={['job_seeker']}>
+              <ApplicationTimeline />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="saved-jobs"
           element={
             <ProtectedRoute allowRoles={['job_seeker']}>
               <SavedJobs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="searches"
+          element={
+            <ProtectedRoute allowRoles={['job_seeker']}>
+              <MySearches />
             </ProtectedRoute>
           }
         />
@@ -139,7 +150,9 @@ function App() {
           }
         />
 
-        {/* Employer */}
+        {/* ============================
+            EMPLOYER
+            ============================ */}
         <Route
           path="dashboard/employer"
           element={
@@ -212,8 +225,26 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="employer/analytics"
+          element={
+            <ProtectedRoute allowRoles={['employer']}>
+              <EmployerAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="employer/team"
+          element={
+            <ProtectedRoute allowRoles={['employer']}>
+              <EmployerTeam />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Applicant profile view */}
+        {/* ============================
+            SHARED (any authenticated user)
+            ============================ */}
         <Route
           path="applicants/:uid"
           element={
@@ -222,8 +253,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Shared */}
         <Route
           path="interviews/:id"
           element={
@@ -248,14 +277,22 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute>
+              <AccountSettings />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Legacy admin redirect */}
+        {/* ============================
+            ADMIN
+            ============================ */}
         <Route
           path="dashboard/admin"
           element={<Navigate to="/admin" replace />}
         />
-
-        {/* Admin console */}
         <Route
           path="admin"
           element={
@@ -272,6 +309,9 @@ function App() {
           <Route path="reports" element={<AdminReports />} />
         </Route>
 
+        {/* ============================
+            404
+            ============================ */}
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

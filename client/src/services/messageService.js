@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { createNotification } from './notificationService'
+import { sendEmail } from './emailService'
 
 function conversationId(employerId, candidateId, jobId) {
   return `${employerId}__${candidateId}__${jobId}`
@@ -39,8 +40,10 @@ export async function ensureConversation({
     const existing = snap.data()
     const patch = {}
     if (employerName && !existing.employerName) patch.employerName = employerName
-    if (candidateName && !existing.candidateName) patch.candidateName = candidateName
-    if (candidateEmail && !existing.candidateEmail) patch.candidateEmail = candidateEmail
+    if (candidateName && !existing.candidateName)
+      patch.candidateName = candidateName
+    if (candidateEmail && !existing.candidateEmail)
+      patch.candidateEmail = candidateEmail
     if (Object.keys(patch).length > 0) {
       try {
         await updateDoc(ref, patch)
@@ -94,6 +97,7 @@ export async function sendMessage({
     /* best-effort */
   }
 
+  // In-app notification
   try {
     await createNotification({
       userId: recipientId,
@@ -102,6 +106,22 @@ export async function sendMessage({
       body: body.trim().slice(0, 80),
       link: `/messages?c=${convId}`,
     })
+  } catch {
+    /* best-effort */
+  }
+
+  // Email the recipient — best-effort, honors prefs
+  try {
+    const recipientSnap = await getDoc(doc(db, 'users', recipientId))
+    if (recipientSnap.exists()) {
+      const recipient = recipientSnap.data()
+      if (recipient.email && recipient.notifyMessages !== false) {
+        sendEmail('new_message', recipient.email, {
+          senderName: 'A SkillNest user',
+          preview: body.trim().slice(0, 140),
+        }).catch(() => {})
+      }
+    }
   } catch {
     /* best-effort */
   }
@@ -168,20 +188,13 @@ export async function markConversationRead(convId, uid) {
 }
 
 export function subscribeUnreadMessageCount(uid, callback) {
-  const q = query(
-    collection(db, 'messages'),
-    where('recipientId', '==', uid)
-  )
+  const q = query(collection(db, 'messages'), where('recipientId', '==', uid))
   return onSnapshot(q, (snap) => {
     const unread = snap.docs.filter((d) => !d.data().isRead).length
     callback(unread)
   })
 }
 
-/**
- * Subscribe to unread messages grouped by conversation.
- * Calls `callback` with a map: { [conversationId]: unreadCount }
- */
 export function subscribeUnreadByConversation(uid, callback) {
   const q = query(
     collection(db, 'messages'),
@@ -198,4 +211,43 @@ export function subscribeUnreadByConversation(uid, callback) {
     })
     callback(map)
   })
+}
+
+export async function getChatParticipantProfile(uid) {
+  if (!uid) return null
+  try {
+    const snap = await getDoc(doc(db, 'users', uid))
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null
+  } catch {
+    return null
+  }
+}
+
+export async function setTyping(convId, uid, name = '') {
+  if (!convId || !uid) return
+  try {
+    await updateDoc(doc(db, 'conversations', convId), {
+      typing: {
+        uid,
+        name,
+        timestamp: Date.now(),
+      },
+    })
+  } catch {
+    /* silent */
+  }
+}
+
+export async function clearTyping(convId, uid) {
+  if (!convId || !uid) return
+  try {
+    const ref = doc(db, 'conversations', convId)
+    const snap = await getDoc(ref)
+    if (!snap.exists()) return
+    if (snap.data()?.typing?.uid === uid) {
+      await updateDoc(ref, { typing: null })
+    }
+  } catch {
+    /* silent */
+  }
 }

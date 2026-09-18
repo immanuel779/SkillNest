@@ -13,6 +13,7 @@ import {
 import { db } from '../config/firebase'
 import { createNotification, notifyAdmins } from './notificationService'
 import { isPermissionError } from '../utils/errors'
+import { sendEmail } from './emailService'
 
 const sortByCreatedDesc = (arr) =>
   [...arr].sort((a, b) => {
@@ -86,6 +87,16 @@ export async function listMyApplications(uid) {
   }
 }
 
+export async function getApplication(appId) {
+  try {
+    const snap = await getDoc(doc(db, 'applications', appId))
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null
+  } catch (err) {
+    if (isPermissionError(err)) return null
+    throw err
+  }
+}
+
 export async function hasApplied(uid, jobId) {
   try {
     const q = query(
@@ -102,6 +113,7 @@ export async function hasApplied(uid, jobId) {
 }
 
 export async function createApplication(uid, email, job, data) {
+  const now = new Date()
   const ref = await addDoc(collection(db, 'applications'), {
     jobId: job.id,
     jobTitle: job.title,
@@ -113,8 +125,14 @@ export async function createApplication(uid, email, job, data) {
     coverLetter: data.coverLetter || '',
     resumeUrl: data.resumeUrl || '',
     resumeName: data.resumeName || '',
+    attachments: Array.isArray(data.attachments) ? data.attachments : [],
     answers: data.answers || [],
+    scorecard: null,
+    scorecardAvg: null,
     status: 'applied',
+    statusHistory: [
+      { status: 'applied', at: now, by: 'candidate' },
+    ],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -142,24 +160,63 @@ export async function createApplication(uid, email, job, data) {
     /* best-effort */
   }
 
-  await notifyAdmins({
-    type: 'admin_new_application',
-    title: '📥 New application on SkillNest',
-    body: `${email} applied to "${job.title}" at ${job.companyName}.`,
-    link: '/admin/applications',
-  })
+  try {
+    const employerSnap = await getDoc(doc(db, 'users', job.ownerId))
+    const employerEmail = employerSnap.exists()
+      ? employerSnap.data().email
+      : null
+    if (employerEmail) {
+      sendEmail('application_received', employerEmail, {
+        jobTitle: job.title,
+        companyName: job.companyName,
+        candidateEmail: email,
+      }).catch(() => {})
+    }
+  } catch {
+    /* best-effort */
+  }
+
+  try {
+    await notifyAdmins({
+      type: 'admin_new_application',
+      title: '📥 New application on SkillNest',
+      body: `${email} applied to "${job.title}" at ${job.companyName}.`,
+      link: '/admin/applications',
+    })
+  } catch {
+    /* best-effort */
+  }
 
   return ref.id
 }
 
-export async function updateApplicationStatus(appId, status) {
+export async function updateApplicationStatus(appId, status, options = {}) {
   const ref = doc(db, 'applications', appId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return
   const app = snap.data()
 
+  const now = new Date()
+  const history = Array.isArray(app.statusHistory) ? app.statusHistory : []
+
+  // Don't double-append if status hasn't changed
+  const last = history[history.length - 1]
+  const nextHistory =
+    last?.status === status
+      ? history
+      : [
+          ...history,
+          {
+            status,
+            at: now,
+            by: options.by || 'employer',
+            note: options.note || '',
+          },
+        ]
+
   await updateDoc(ref, {
     status,
+    statusHistory: nextHistory,
     updatedAt: serverTimestamp(),
   })
 
@@ -180,16 +237,36 @@ export async function updateApplicationStatus(appId, status) {
     /* best-effort */
   }
 
-  const emoji =
-    { hired: '🎉', rejected: '❌', shortlisted: '⭐', interview: '📅' }[status] ||
-    '📊'
+  try {
+    const candidateSnap = await getDoc(doc(db, 'users', app.applicantId))
+    const candidateEmail = candidateSnap.exists()
+      ? candidateSnap.data().email
+      : null
+    if (candidateEmail && status !== 'applied') {
+      sendEmail('status_change', candidateEmail, {
+        status,
+        jobTitle: app.jobTitle,
+        companyName: app.companyName,
+      }).catch(() => {})
+    }
+  } catch {
+    /* best-effort */
+  }
 
-  await notifyAdmins({
-    type: 'admin_status_change',
-    title: `${emoji} Application marked as "${status.replace('_', ' ')}"`,
-    body: `${app.applicantEmail} → "${app.jobTitle}" at ${app.companyName}.`,
-    link: '/admin/applications',
-  })
+  try {
+    const emoji =
+      { hired: '🎉', rejected: '❌', shortlisted: '⭐', interview: '📅' }[
+        status
+      ] || '📊'
+    await notifyAdmins({
+      type: 'admin_status_change',
+      title: `${emoji} Application marked as "${status.replace('_', ' ')}"`,
+      body: `${app.applicantEmail} → "${app.jobTitle}" at ${app.companyName}.`,
+      link: '/admin/applications',
+    })
+  } catch {
+    /* best-effort */
+  }
 }
 
 export async function getApplicantProfile(uid) {
@@ -200,4 +277,37 @@ export async function getApplicantProfile(uid) {
     if (isPermissionError(err)) return null
     throw err
   }
+}
+
+export async function saveScorecard(appId, scorecard) {
+  const ref = doc(db, 'applications', appId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Application not found')
+
+  const scores = [
+    scorecard.technical,
+    scorecard.culture,
+    scorecard.communication,
+  ].filter((s) => typeof s === 'number' && s >= 1 && s <= 5)
+
+  const avg =
+    scores.length > 0
+      ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1))
+      : null
+
+  const payload = {
+    scorecard: {
+      technical: scorecard.technical ?? null,
+      culture: scorecard.culture ?? null,
+      communication: scorecard.communication ?? null,
+      recommendation: scorecard.recommendation || '',
+      notes: (scorecard.notes || '').slice(0, 2000),
+      updatedAt: new Date(),
+    },
+    scorecardAvg: avg,
+    updatedAt: serverTimestamp(),
+  }
+
+  await updateDoc(ref, payload)
+  return payload
 }
