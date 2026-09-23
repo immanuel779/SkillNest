@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMyCompany } from '../services/companyService'
 import { createJob, updateJob, getJob } from '../services/jobService'
 import AIJobDescriptionWriter from '../components/ai/AIJobDescriptionWriter'
+import VerifyEmailBanner from '../components/VerifyEmailBanner'
 
 const JOB_TYPES = [
   { v: 'full_time', l: 'Full-time' },
@@ -44,15 +45,16 @@ function Field({ label, children, className = '' }) {
   )
 }
 
-/**
- * Split the AI response into the three sections we asked for.
- * Returns { description, responsibilities, requirements }.
- */
 function parseAIJobDescription(text) {
   if (!text) return { description: '', responsibilities: '', requirements: '' }
 
   const lines = text.split('\n')
-  const sections = { ABOUT: [], RESPONSIBILITIES: [], REQUIREMENTS: [], OTHER: [] }
+  const sections = {
+    ABOUT: [],
+    RESPONSIBILITIES: [],
+    REQUIREMENTS: [],
+    OTHER: [],
+  }
   let current = 'ABOUT'
 
   for (const raw of lines) {
@@ -73,7 +75,6 @@ function parseAIJobDescription(text) {
       continue
     }
     if (upper.startsWith('NICE TO HAVE')) {
-      // Fold nice-to-haves into requirements
       current = 'REQUIREMENTS'
       sections.REQUIREMENTS.push('Nice to have:')
       continue
@@ -160,6 +161,15 @@ export default function EmployerPostJob() {
 
   const handleSave = async (publish = false) => {
     setError('')
+
+    // ── Email verification gate ──────────────────────────────
+    if (publish && !user?.emailVerified) {
+      setError(
+        'Please verify your email before publishing a job. Check your inbox for the verification link.'
+      )
+      return
+    }
+
     if (!form.title.trim()) {
       setError('Job title is required')
       return
@@ -230,6 +240,8 @@ export default function EmployerPostJob() {
         <ArrowLeft size={14} /> Back to jobs
       </button>
 
+      <VerifyEmailBanner />
+
       <h1 className="text-3xl font-extrabold mb-1">
         {isEdit ? 'Edit Job' : 'Post a Job'}
       </h1>
@@ -250,7 +262,7 @@ export default function EmployerPostJob() {
         <Field label="Job title *">
           <input
             className="input"
-            value={form.title}
+            value={form.title || ''}
             onChange={(e) => update('title', e.target.value)}
             placeholder="Senior Frontend Engineer"
           />
@@ -259,7 +271,7 @@ export default function EmployerPostJob() {
           <Field label="Category">
             <input
               className="input"
-              value={form.category}
+              value={form.category || ''}
               onChange={(e) => update('category', e.target.value)}
               placeholder="Engineering"
             />
@@ -267,7 +279,7 @@ export default function EmployerPostJob() {
           <Field label="Location">
             <input
               className="input"
-              value={form.location}
+              value={form.location || ''}
               onChange={(e) => update('location', e.target.value)}
               placeholder="Remote / Lagos"
             />
@@ -315,7 +327,7 @@ export default function EmployerPostJob() {
             <input
               type="date"
               className="input"
-              value={form.applicationDeadline}
+              value={form.applicationDeadline || ''}
               onChange={(e) => update('applicationDeadline', e.target.value)}
             />
           </Field>
@@ -339,7 +351,7 @@ export default function EmployerPostJob() {
             <input
               type="number"
               className="input"
-              value={form.salaryMin}
+              value={form.salaryMin || ''}
               onChange={(e) => update('salaryMin', e.target.value)}
               placeholder="60000"
             />
@@ -348,7 +360,7 @@ export default function EmployerPostJob() {
             <input
               type="number"
               className="input"
-              value={form.salaryMax}
+              value={form.salaryMax || ''}
               onChange={(e) => update('salaryMax', e.target.value)}
               placeholder="90000"
             />
@@ -357,14 +369,14 @@ export default function EmployerPostJob() {
       </Section>
 
       <Section title="Description">
-        {/* AI writer — fills all three fields below */}
         <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
           <div>
             <p className="text-sm font-semibold text-gray-800">
               Let AI write it for you
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
-              Uses your title, level, and skills to draft About, Responsibilities, and Requirements.
+              Uses your title, level, and skills to draft About, Responsibilities,
+              and Requirements.
             </p>
           </div>
           <AIJobDescriptionWriter
@@ -395,7 +407,7 @@ export default function EmployerPostJob() {
           <textarea
             rows={5}
             className="input resize-none"
-            value={form.description}
+            value={form.description || ''}
             onChange={(e) => update('description', e.target.value)}
             placeholder="What the job involves..."
           />
@@ -404,7 +416,7 @@ export default function EmployerPostJob() {
           <textarea
             rows={4}
             className="input resize-none"
-            value={form.responsibilities}
+            value={form.responsibilities || ''}
             onChange={(e) => update('responsibilities', e.target.value)}
             placeholder="One per line..."
           />
@@ -413,7 +425,7 @@ export default function EmployerPostJob() {
           <textarea
             rows={4}
             className="input resize-none"
-            value={form.requirements}
+            value={form.requirements || ''}
             onChange={(e) => update('requirements', e.target.value)}
             placeholder="One per line..."
           />
@@ -469,8 +481,13 @@ export default function EmployerPostJob() {
           </button>
           <button
             onClick={() => handleSave(true)}
-            disabled={saving}
-            className="btn-primary"
+            disabled={saving || !user?.emailVerified}
+            className="btn-primary disabled:opacity-60"
+            title={
+              !user?.emailVerified
+                ? 'Verify your email to publish'
+                : 'Publish this job'
+            }
           >
             <Sparkles size={16} /> {saving ? 'Saving...' : 'Publish Job'}
           </button>

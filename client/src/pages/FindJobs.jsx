@@ -16,6 +16,7 @@ import { useToast } from '../context/ToastContext'
 import { listPublishedJobs } from '../services/jobService'
 import { isJobSaved, saveJob, unsaveJob } from '../services/savedJobService'
 import { createSavedSearch } from '../services/savedSearchService'
+import AIJobMatchBadge from '../components/ai/AIJobMatchBadge'
 import { SkeletonList } from '../components/Skeletons'
 import { friendlyError } from '../utils/errors'
 
@@ -57,7 +58,7 @@ const CATEGORIES = [
 ]
 
 export default function FindJobs() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -378,6 +379,14 @@ export default function FindJobs() {
                     <span className="badge bg-gray-100 text-gray-600">
                       {j.workMode}
                     </span>
+                    {/* AI match badge — only for signed-in job seekers */}
+                    {user && profile?.role === 'job_seeker' && (
+                      <AIJobMatchBadge
+                        job={j}
+                        candidate={{ ...profile, uid: user.uid }}
+                        compact
+                      />
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mt-1 font-medium inline-flex items-center gap-1.5">
                     {j.companyName}

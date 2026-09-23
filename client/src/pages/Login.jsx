@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, AlertCircle, ShieldAlert, LifeBuoy } from 'lucide-react'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { db } from '../config/firebase'
 import { friendlyError } from '../utils/errors'
@@ -36,12 +36,24 @@ export default function Login() {
     try {
       const cred = await login(email, password)
       const uid = cred.user.uid
+      const userEmail = cred.user.email || email
 
-      const snap = await getDoc(doc(db, 'users', uid))
+      let snap = await getDoc(doc(db, 'users', uid))
+
+      // ─── AUTO-HEAL: create missing user doc on first login ───
       if (!snap.exists()) {
-        await logout()
-        setError('Account not found. Please contact support.')
-        return
+        const newDoc = {
+          uid,
+          email: userEmail,
+          fullName: cred.user.displayName || userEmail.split('@')[0],
+          role: 'job_seeker', // default; user can change later in settings
+          photoURL: cred.user.photoURL || '',
+          isSuspended: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+        await setDoc(doc(db, 'users', uid), newDoc)
+        snap = await getDoc(doc(db, 'users', uid))
       }
 
       const data = snap.data()

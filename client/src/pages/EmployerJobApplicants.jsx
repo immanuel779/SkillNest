@@ -17,6 +17,7 @@ import {
   Square,
   CheckSquare,
   ChevronDown,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -29,6 +30,7 @@ import {
 import { ensureConversation } from '../services/messageService'
 import { openWhatsApp } from '../utils/whatsapp'
 import { friendlyError } from '../utils/errors'
+import { toCSV, downloadCSV } from '../utils/csv'
 import { SkeletonList } from '../components/Skeletons'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import ScorecardModal from '../components/ScorecardModal'
@@ -206,6 +208,70 @@ export default function EmployerJobApplicants() {
     navigate(`/employer/applications/${app.id}/interview`)
   }
 
+  /* ============================================================
+     CSV EXPORT
+     ============================================================ */
+  const exportCSV = () => {
+    const rows = apps.map((a) => ({ a, p: profiles[a.applicantId] || {} }))
+
+    const columns = [
+      { label: 'Name', value: ({ p }) => p.fullName || '' },
+      { label: 'Email', value: ({ a }) => a.applicantEmail || '' },
+      { label: 'Phone', value: ({ p }) => p.phone || '' },
+      { label: 'Location', value: ({ p }) => p.location || '' },
+      { label: 'Headline', value: ({ p }) => p.headline || '' },
+      {
+        label: 'Skills',
+        value: ({ p }) =>
+          (p.skills || [])
+            .map((s) => (typeof s === 'string' ? s : s.name))
+            .filter(Boolean)
+            .join('; '),
+      },
+      { label: 'Status', value: ({ a }) => a.status || '' },
+      {
+        label: 'Score',
+        value: ({ a }) =>
+          typeof a.scorecardAvg === 'number' ? a.scorecardAvg.toFixed(1) : '',
+      },
+      { label: 'Job', value: ({ a }) => a.jobTitle || job?.title || '' },
+      {
+        label: 'Applied at',
+        value: ({ a }) =>
+          a.createdAt?.seconds
+            ? new Date(a.createdAt.seconds * 1000).toLocaleString()
+            : '',
+      },
+      {
+        label: 'Resume',
+        value: ({ a, p }) => a.resumeUrl || p.resumeUrl || '',
+      },
+      {
+        label: 'Attachments',
+        value: ({ a }) =>
+          (a.attachments || [])
+            .map((x) => x.name || x.url)
+            .filter(Boolean)
+            .join('; '),
+      },
+    ]
+
+    const csv = toCSV(rows, columns)
+    if (!csv) {
+      toast.info('No applicants to export yet.')
+      return
+    }
+
+    const safeTitle = (job?.title || 'applicants')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .toLowerCase()
+      .slice(0, 40)
+
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCSV(`${safeTitle}-applicants-${date}.csv`, csv)
+    toast.success('Exported', `${apps.length} applicants downloaded.`)
+  }
+
   const filtered =
     filter === 'all' ? apps : apps.filter((a) => a.status === filter)
 
@@ -301,6 +367,16 @@ export default function EmployerJobApplicants() {
               </button>
             </>
           )}
+
+          {/* CSV export */}
+          <button
+            onClick={exportCSV}
+            disabled={apps.length === 0}
+            className="btn-outline disabled:opacity-50"
+            title="Export applicants to CSV"
+          >
+            <FileSpreadsheet size={14} /> CSV
+          </button>
 
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
             <button

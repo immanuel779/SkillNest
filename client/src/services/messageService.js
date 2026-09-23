@@ -15,6 +15,80 @@ import { db } from '../config/firebase'
 import { createNotification } from './notificationService'
 import { sendEmail } from './emailService'
 
+/* ============================================================
+   RATE LIMITING (client-side, per user)
+   ============================================================ */
+
+const RATE_LIMITS = {
+  burst: { max: 10, windowMs: 30 * 1000 },
+  hourly: { max: 200, windowMs: 60 * 60 * 1000 },
+}
+
+const RATE_KEY = (uid) => `skillnest_msgRate_${uid}`
+
+function readRate(uid) {
+  if (!uid) return []
+  try {
+    const raw = localStorage.getItem(RATE_KEY(uid))
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function writeRate(uid, timestamps) {
+  try {
+    localStorage.setItem(RATE_KEY(uid), JSON.stringify(timestamps))
+  } catch {
+    /* silent */
+  }
+}
+
+function enforceRateLimit(uid) {
+  if (!uid) return
+  const now = Date.now()
+  const all = readRate(uid)
+  const hourAgo = now - RATE_LIMITS.hourly.windowMs
+  const recent = all.filter((t) => t > hourAgo)
+
+  const burstCount = recent.filter(
+    (t) => t > now - RATE_LIMITS.burst.windowMs
+  ).length
+
+  if (burstCount >= RATE_LIMITS.burst.max) {
+    const oldest = recent.find((t) => t > now - RATE_LIMITS.burst.windowMs)
+    const waitSec = Math.max(
+      1,
+      Math.ceil((oldest + RATE_LIMITS.burst.windowMs - now) / 1000)
+    )
+    const err = new Error(
+      `Slow down — you're sending messages too fast. Try again in ${waitSec}s.`
+    )
+    err.code = 'RATE_LIMIT_BURST'
+    throw err
+  }
+
+  if (recent.length >= RATE_LIMITS.hourly.max) {
+    const oldest = recent[0]
+    const waitMin = Math.max(
+      1,
+      Math.ceil((oldest + RATE_LIMITS.hourly.windowMs - now) / 60000)
+    )
+    const err = new Error(
+      `You've hit the hourly message limit. Try again in ${waitMin} min.`
+    )
+    err.code = 'RATE_LIMIT_HOURLY'
+    throw err
+  }
+
+  recent.push(now)
+  writeRate(uid, recent)
+}
+
+/* ============================================================
+   CONVERSATIONS + MESSAGES
+   ============================================================ */
+
 function conversationId(employerId, candidateId, jobId) {
   return `${employerId}__${candidateId}__${jobId}`
 }
@@ -84,19 +158,24 @@ export async function sendMessage({
   recipientId,
   body,
 }) {
-  if (!body.trim()) return
+  if (!body?.trim()) return
+
+  const clean = body.trim().slice(0, 5000)
+
+  enforceRateLimit(senderId)
+
   const ref = await addDoc(collection(db, 'messages'), {
     conversationId: convId,
     senderId,
     recipientId,
-    body: body.trim(),
+    body: clean,
     isRead: false,
     createdAt: serverTimestamp(),
   })
 
   try {
     await updateDoc(doc(db, 'conversations', convId), {
-      lastMessage: body.trim().slice(0, 120),
+      lastMessage: clean.slice(0, 120),
       lastMessageAt: serverTimestamp(),
       lastSenderId: senderId,
     })
@@ -104,20 +183,18 @@ export async function sendMessage({
     /* best-effort */
   }
 
-  // In-app notification
   try {
     await createNotification({
       userId: recipientId,
       type: 'message',
       title: 'New message',
-      body: body.trim().slice(0, 80),
+      body: clean.slice(0, 80),
       link: `/messages?c=${convId}`,
     })
   } catch {
     /* best-effort */
   }
 
-  // Email the recipient — best-effort, honors prefs
   try {
     const recipientSnap = await getDoc(doc(db, 'users', recipientId))
     if (recipientSnap.exists()) {
@@ -125,7 +202,7 @@ export async function sendMessage({
       if (recipient.email && recipient.notifyMessages !== false) {
         sendEmail('new_message', recipient.email, {
           senderName: 'A SkillNest user',
-          preview: body.trim().slice(0, 140),
+          preview: clean.slice(0, 140),
         }).catch(() => {})
       }
     }
@@ -158,10 +235,6 @@ export function subscribeConversations(uid, callback) {
   })
 }
 
-/**
- * Admin-only: stream ALL conversations on the platform.
- * Requires Firestore rules to allow admin reads on the conversations collection.
- */
 export function subscribeAllConversations(callback) {
   const q = query(collection(db, 'conversations'))
   return onSnapshot(
@@ -178,17 +251,8 @@ export function subscribeAllConversations(callback) {
   )
 }
 
-/**
- * Admin-only: stream unread counts grouped by conversation for everyone.
- * Admin isn't a participant, so the standard per-user unread subscription
- * wouldn't return anything. This one just counts unread messages globally
- * (or per-conversation) so the badges still render.
- */
 export function subscribeAllUnreadByConversation(callback) {
-  const q = query(
-    collection(db, 'messages'),
-    where('isRead', '==', false)
-  )
+  const q = query(collection(db, 'messages'), where('isRead', '==', false))
   return onSnapshot(
     q,
     (snap) => {
@@ -276,11 +340,7 @@ export async function setTyping(convId, uid, name = '') {
   if (!convId || !uid) return
   try {
     await updateDoc(doc(db, 'conversations', convId), {
-      typing: {
-        uid,
-        name,
-        timestamp: Date.now(),
-      },
+      typing: { uid, name, timestamp: Date.now() },
     })
   } catch {
     /* silent */

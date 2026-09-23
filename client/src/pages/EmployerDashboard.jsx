@@ -14,6 +14,8 @@ import { useAuth } from '../context/AuthContext'
 import { db } from '../config/firebase'
 import { listMyJobs } from '../services/jobService'
 import { listMyInterviews } from '../services/interviewService'
+import NotificationBell from '../components/NotificationBell'
+import VerifyEmailBanner from '../components/VerifyEmailBanner'
 
 export default function EmployerDashboard() {
   const { user, profile } = useAuth()
@@ -48,7 +50,6 @@ export default function EmployerDashboard() {
         )
         const apps = appsSnap.docs.map((d) => d.data())
 
-        // Compute per-job counts from the real applications.
         const countsByJob = {}
         apps.forEach((a) => {
           if (a.jobId) countsByJob[a.jobId] = (countsByJob[a.jobId] || 0) + 1
@@ -113,16 +114,19 @@ export default function EmployerDashboard() {
 
   return (
     <div className="container-app py-6 sm:py-10">
-      <div className="flex justify-between items-center mb-6 sm:mb-8 flex-wrap gap-3">
-        <div>
+      <VerifyEmailBanner />
+
+      <div className="flex justify-between items-start sm:items-center mb-6 sm:mb-8 flex-wrap gap-3">
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-extrabold">
             Employer Dashboard
           </h1>
-          <p className="text-gray-500 mt-1 text-sm sm:text-base">
+          <p className="text-gray-500 mt-1 text-sm sm:text-base truncate">
             Welcome, {profile?.fullName || user?.email}.
           </p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
+          <NotificationBell />
           <Link to="/employer/analytics" className="btn-outline">
             <TrendingUp size={16} /> Analytics
           </Link>

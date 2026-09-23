@@ -11,6 +11,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { getPlatformStats } from '../../services/adminService'
+import NotificationBell from '../../components/NotificationBell'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
@@ -32,22 +33,61 @@ export default function AdminDashboard() {
   }, [])
 
   const cards = [
-    { label: 'Total Users', value: stats?.users, icon: Users, color: 'brand', to: '/admin/users' },
-    { label: 'Employers', value: stats?.employers, icon: Building2, color: 'accent', to: '/admin/companies' },
-    { label: 'Active Jobs', value: stats?.activeJobs, icon: Briefcase, color: 'brand', to: '/admin/jobs' },
-    { label: 'Applications', value: stats?.applications, icon: FileText, color: 'accent', to: '/admin/applications' },
-    { label: 'Interviews', value: stats?.interviews, icon: CalendarCheck, color: 'brand', to: null },
+    {
+      label: 'Total Users',
+      value: stats?.users,
+      icon: Users,
+      color: 'brand',
+      to: '/admin/users',
+    },
+    {
+      label: 'Employers',
+      value: stats?.employers,
+      icon: Building2,
+      color: 'accent',
+      to: '/admin/companies',
+    },
+    {
+      label: 'Active Jobs',
+      value: stats?.activeJobs,
+      icon: Briefcase,
+      color: 'brand',
+      to: '/admin/jobs',
+    },
+    {
+      label: 'Applications',
+      value: stats?.applications,
+      icon: FileText,
+      color: 'accent',
+      to: '/admin/applications',
+    },
+    {
+      label: 'Interviews',
+      value: stats?.interviews,
+      icon: CalendarCheck,
+      color: 'brand',
+      to: null,
+    },
     { label: 'Hires', value: stats?.hires, icon: Trophy, color: 'accent', to: null },
-    { label: 'Open Reports', value: stats?.openReports, icon: Flag, color: 'red', to: '/admin/reports' },
+    {
+      label: 'Open Reports',
+      value: stats?.openReports,
+      icon: Flag,
+      color: 'red',
+      to: '/admin/reports',
+    },
   ]
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">Platform overview</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Real-time stats across the entire SkillNest platform.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-bold">Platform overview</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Real-time stats across the entire SkillNest platform.
+          </p>
+        </div>
+        <NotificationBell />
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -88,20 +128,29 @@ export default function AdminDashboard() {
             Platform health
           </h3>
           <p className="text-sm text-gray-600">
-            All systems operational. You can review reports, suspend accounts, and
-            moderate jobs from the sidebar.
+            All systems operational. You can review reports, suspend accounts,
+            and moderate jobs from the sidebar.
           </p>
         </div>
         <div className="card">
           <h3 className="text-lg font-bold mb-2">Quick actions</h3>
           <div className="flex flex-wrap gap-2">
-            <Link to="/admin/users" className="btn-outline !py-2 !px-3 text-sm">
+            <Link
+              to="/admin/users"
+              className="btn-outline !py-2 !px-3 text-sm"
+            >
               Manage users
             </Link>
-            <Link to="/admin/jobs" className="btn-outline !py-2 !px-3 text-sm">
+            <Link
+              to="/admin/jobs"
+              className="btn-outline !py-2 !px-3 text-sm"
+            >
               Review jobs
             </Link>
-            <Link to="/admin/reports" className="btn-outline !py-2 !px-3 text-sm">
+            <Link
+              to="/admin/reports"
+              className="btn-outline !py-2 !px-3 text-sm"
+            >
               Open reports
             </Link>
           </div>

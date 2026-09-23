@@ -13,6 +13,8 @@ import { listMySavedJobs } from '../services/savedJobService'
 import { listMyInterviews } from '../services/interviewService'
 import { getProfile } from '../services/profileService'
 import ProfileCompletenessCard from '../components/ProfileCompletenessCard'
+import NotificationBell from '../components/NotificationBell'
+import AIRecommendedJobs from '../components/ai/AIRecommendedJobs'
 import { SkeletonStatCard } from '../components/Skeletons'
 
 export default function JobSeekerDashboard() {
@@ -60,28 +62,55 @@ export default function JobSeekerDashboard() {
   }, [user])
 
   const cards = [
-    { label: 'Applications', value: stats.applications, icon: Briefcase, color: 'brand' },
+    {
+      label: 'Applications',
+      value: stats.applications,
+      icon: Briefcase,
+      color: 'brand',
+    },
     { label: 'Saved Jobs', value: stats.saved, icon: Bookmark, color: 'accent' },
-    { label: 'Shortlisted', value: stats.shortlisted, icon: TrendingUp, color: 'brand' },
-    { label: 'Interviews', value: stats.interviews, icon: CalendarCheck, color: 'accent' },
+    {
+      label: 'Shortlisted',
+      value: stats.shortlisted,
+      icon: TrendingUp,
+      color: 'brand',
+    },
+    {
+      label: 'Interviews',
+      value: stats.interviews,
+      icon: CalendarCheck,
+      color: 'accent',
+    },
   ]
 
   return (
-    <div className="container-app py-10">
-      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold">Dashboard</h1>
-          <p className="text-gray-500 mt-1">
-            Welcome back, {authProfile?.fullName || user?.email}.
-          </p>
+    <div className="container-app py-6 sm:py-10">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold">Dashboard</h1>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">
+              Welcome back, {authProfile?.fullName || user?.email}.
+            </p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <NotificationBell />
+            <Link to="/jobs" className="btn-primary">
+              <Search size={16} /> Find Jobs
+            </Link>
+          </div>
         </div>
-        <Link to="/jobs" className="btn-primary">
-          <Search size={16} /> Find Jobs
-        </Link>
+
+        <div className="flex sm:hidden mt-4">
+          <Link to="/jobs" className="btn-primary w-full justify-center">
+            <Search size={16} /> Find Jobs
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <SkeletonStatCard key={i} />
@@ -97,14 +126,23 @@ export default function JobSeekerDashboard() {
                 >
                   <c.icon size={18} />
                 </div>
-                <div className="text-sm text-gray-500">{c.label}</div>
-                <div className="text-3xl font-extrabold mt-1">{c.value}</div>
+                <div className="text-xs sm:text-sm text-gray-500">
+                  {c.label}
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold mt-1">
+                  {c.value}
+                </div>
               </div>
             ))}
       </div>
 
+      {/* NEW — AI Recommended Jobs */}
+      <div className="mt-8 sm:mt-10">
+        <AIRecommendedJobs />
+      </div>
+
       {/* Profile completeness + Track applications */}
-      <div className="mt-10 grid md:grid-cols-2 gap-6">
+      <div className="mt-8 sm:mt-10 grid md:grid-cols-2 gap-6">
         {loading ? (
           <div className="card">
             <div className="h-4 w-32 animate-pulse rounded-md bg-gray-200 mb-4" />

@@ -84,6 +84,7 @@ export default function Navbar() {
         { name: 'Updates', path: '/employer/updates' },
         { name: 'Interviews', path: '/employer/interviews' },
         { name: 'Team', path: '/employer/team' },
+        
       ]
     }
     return [
@@ -93,6 +94,7 @@ export default function Navbar() {
       { name: 'Saved', path: '/saved-jobs' },
       { name: 'Searches', path: '/searches' },
       { name: 'Interviews', path: '/interviews' },
+       { name: 'Resume', path: '/resume' },  
     ]
   })()
 
@@ -191,23 +193,26 @@ export default function Navbar() {
                     Dashboard
                   </Link>
                 )}
+
                 <button
-  onClick={() => {
-    document.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'k',
-        metaKey: true,
-      })
-    )
-  }}
-  className="hidden xl:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:text-brand-700 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 transition"
-  aria-label="Open command palette"
-  title="Command palette (⌘K)"
->
-  <Search size={13} />
-  <span>Search</span>
-  <kbd className="ml-1 text-[10px] font-bold text-gray-400 dark:text-gray-500">⌘K</kbd>
-</button>
+                  onClick={() => {
+                    document.dispatchEvent(
+                      new KeyboardEvent('keydown', {
+                        key: 'k',
+                        metaKey: true,
+                      })
+                    )
+                  }}
+                  className="hidden xl:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:text-brand-700 dark:hover:text-brand-400 hover:border-brand-300 dark:hover:border-brand-700 transition"
+                  aria-label="Open command palette"
+                  title="Command palette (⌘K)"
+                >
+                  <Search size={13} />
+                  <span>Search</span>
+                  <kbd className="ml-1 text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                    ⌘K
+                  </kbd>
+                </button>
 
                 {/* Theme toggle */}
                 <ThemeMenuButton />
@@ -260,13 +265,17 @@ export default function Navbar() {
             )}
           </div>
 
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          {/* Mobile: bell + hamburger */}
+          <div className="lg:hidden flex items-center gap-0.5 shrink-0">
+            {user && <NotificationBell />}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -261,3 +261,82 @@ RECOMMENDATION: [Strong Match / Good Match / Possible Match / Weak Match]`
 
   return generate(prompt, { temperature: 0.4, maxOutputTokens: 500 })
 }
+
+/* ============================================================
+   5. AI RESUME BUILDER HELPERS
+   ============================================================ */
+
+/** Rewrite a short summary into a professional one. */
+export async function polishSummary({ currentSummary, profile }) {
+  const prompt = `Rewrite this professional summary for a resume. Make it 3-4 sentences, professional, confident, and specific. No fluff. Plain text, no markdown.
+
+CURRENT SUMMARY:
+${currentSummary || '(none)'}
+
+CONTEXT:
+- Headline: ${profile?.headline || 'Not provided'}
+- Skills: ${(profile?.skills || [])
+    .map((s) => (typeof s === 'string' ? s : s.name))
+    .join(', ') || 'Not listed'}
+
+Return ONLY the rewritten summary. No preamble.`
+
+  return generate(prompt, { temperature: 0.7, maxOutputTokens: 300 })
+}
+
+/** Turn a plain description into a strong resume bullet. */
+export async function improveBullet({ bullet, role, company }) {
+  const prompt = `Rewrite this resume bullet point to be a strong achievement. Start with a strong action verb. Add impact if obvious. Keep it under 25 words. Plain text, no markdown, no leading dashes.
+
+Role: ${role || 'Professional'}
+Company: ${company || ''}
+
+ORIGINAL:
+${bullet}
+
+Return ONLY the improved bullet. No preamble.`
+
+  return generate(prompt, { temperature: 0.7, maxOutputTokens: 120 })
+}
+
+/** Generate a full professional summary from the profile. */
+export async function generateSummaryFromProfile({ profile }) {
+  const exp = (profile?.experience || [])
+    .map((x) => `${x.title || 'Role'} at ${x.company || 'Company'}`)
+    .join('\n')
+
+  const prompt = `Write a professional resume summary (3-4 sentences). Make it confident, specific, and ATS-friendly. Plain text, no markdown.
+
+CANDIDATE:
+- Headline: ${profile?.headline || 'Not provided'}
+- Skills: ${(profile?.skills || [])
+    .map((s) => (typeof s === 'string' ? s : s.name))
+    .join(', ') || 'Not listed'}
+- Experience:
+${exp || 'Not provided'}
+
+Return ONLY the summary. No preamble.`
+
+  return generate(prompt, { temperature: 0.7, maxOutputTokens: 300 })
+}
+
+/** Suggest skills based on headline and experience. */
+export async function suggestSkills({ headline, experience }) {
+  const prompt = `Suggest 10 relevant professional skills for a resume.
+
+Headline: ${headline || 'Professional'}
+Recent experience: ${experience || 'Not provided'}
+
+Return ONLY a comma-separated list of 10 skills. No numbering, no bullets, no preamble.`
+
+  const text = await generate(prompt, {
+    temperature: 0.6,
+    maxOutputTokens: 200,
+  })
+
+  return text
+    .split(/[,\n]/)
+    .map((s) => s.trim())
+    .filter((s) => s && s.length < 40)
+    .slice(0, 10)
+}

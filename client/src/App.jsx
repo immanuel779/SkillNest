@@ -53,6 +53,7 @@ import AccountSettings from './pages/AccountSettings'
 import Companies from './pages/Companies'
 import { useInterviewReminders } from './hooks/useInterviewReminders'
 import { useJobAlerts } from './hooks/useJobAlerts'
+import ResumeBuilder from './pages/ResumeBuilder'
 
 function App() {
   useInterviewReminders()
@@ -89,6 +90,7 @@ function App() {
         <Route path="privacy" element={<Privacy />} />
         <Route path="terms" element={<Terms />} />
         <Route path="security" element={<Security />} />
+        <Route path="/resume" element={<ResumeBuilder />} />
 
         {/* ============================
             JOB SEEKER
