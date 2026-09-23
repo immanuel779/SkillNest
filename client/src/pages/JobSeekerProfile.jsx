@@ -21,6 +21,7 @@ import { uploadImage, uploadDocument } from '../services/storageService'
 import { friendlyError } from '../utils/errors'
 import AIResumeFeedback from '../components/ai/AIResumeFeedback'
 import { extractPdfText } from '../utils/pdf'
+import { shouldShowGithub } from '../utils/profession'
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 const JOB_TYPES = ['full_time', 'part_time', 'contract', 'internship', 'temporary']
@@ -45,7 +46,9 @@ function buildResumeText(form) {
 
   if (form.skills?.length) {
     lines.push('', 'SKILLS:')
-    form.skills.forEach((s) => lines.push(`- ${s.name} (${s.level || 'Intermediate'})`))
+    form.skills.forEach((s) =>
+      lines.push(`- ${s.name} (${s.level || 'Intermediate'})`)
+    )
   }
 
   if (form.experience?.length) {
@@ -80,7 +83,10 @@ function noNulls(obj) {
   if (Array.isArray(obj)) return obj.map(noNulls)
   if (typeof obj === 'object') {
     return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [k, v === null ? '' : noNulls(v)])
+      Object.entries(obj).map(([k, v]) => [
+        k,
+        v === null || v === undefined ? '' : noNulls(v),
+      ])
     )
   }
   return obj
@@ -127,7 +133,6 @@ export default function JobSeekerProfile() {
       try {
         const data = await getProfile(user.uid)
         if (alive && data) {
-          // Normalize every null to '' (and recurse into arrays/objects)
           setForm((f) => ({ ...f, ...noNulls(data) }))
         }
       } catch (err) {
@@ -157,7 +162,6 @@ export default function JobSeekerProfile() {
         portfolioUrl: form.portfolioUrl || '',
         linkedinUrl: form.linkedinUrl || '',
         githubUrl: form.githubUrl || '',
-        // Save '' instead of null so the next load never carries a null back
         expectedSalary: form.expectedSalary ? Number(form.expectedSalary) : '',
         preferredJobType: form.preferredJobType || '',
         preferredWorkMode: form.preferredWorkMode || '',
@@ -258,13 +262,17 @@ export default function JobSeekerProfile() {
   const addSkill = () => {
     const name = prompt('Skill name?')?.trim()
     if (!name) return
-    if (form.skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) return
+    if (form.skills.some((s) => s.name.toLowerCase() === name.toLowerCase()))
+      return
     update('skills', [...form.skills, { name, level: 'Intermediate' }])
   }
   const removeSkill = (name) =>
     update('skills', form.skills.filter((s) => s.name !== name))
   const setSkillLevel = (name, level) =>
-    update('skills', form.skills.map((s) => (s.name === name ? { ...s, level } : s)))
+    update(
+      'skills',
+      form.skills.map((s) => (s.name === name ? { ...s, level } : s))
+    )
 
   const addExperience = () =>
     update('experience', [
@@ -321,6 +329,7 @@ export default function JobSeekerProfile() {
   }
 
   const resumeTextForAI = form.resumeText?.trim() || buildResumeText(form)
+  const showGithub = shouldShowGithub(form)
 
   return (
     <div className="container-app py-10 pb-32">
@@ -451,14 +460,18 @@ export default function JobSeekerProfile() {
               className="input"
             />
           </Field>
-          <Field label="GitHub">
-            <input
-              value={form.githubUrl || ''}
-              onChange={(e) => update('githubUrl', e.target.value)}
-              placeholder="https://github.com/you"
-              className="input"
-            />
-          </Field>
+
+          {/* GitHub is only shown for dev/tech profiles (or if already set) */}
+          {showGithub && (
+            <Field label="GitHub">
+              <input
+                value={form.githubUrl || ''}
+                onChange={(e) => update('githubUrl', e.target.value)}
+                placeholder="https://github.com/you"
+                className="input"
+              />
+            </Field>
+          )}
         </div>
       </Section>
 
@@ -477,7 +490,10 @@ export default function JobSeekerProfile() {
         }
       >
         {form.skills.length === 0 ? (
-          <EmptyState icon={Briefcase} text="No skills yet. Add your first skill." />
+          <EmptyState
+            icon={Briefcase}
+            text="No skills yet. Add your first skill."
+          />
         ) : (
           <div className="flex flex-wrap gap-2">
             {form.skills.map((s) => (
@@ -485,7 +501,9 @@ export default function JobSeekerProfile() {
                 key={s.name}
                 className="group inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-lg bg-brand-50 border border-brand-100"
               >
-                <span className="text-sm font-medium text-brand-800">{s.name}</span>
+                <span className="text-sm font-medium text-brand-800">
+                  {s.name}
+                </span>
                 <select
                   value={s.level || 'Intermediate'}
                   onChange={(e) => setSkillLevel(s.name, e.target.value)}
@@ -527,12 +545,17 @@ export default function JobSeekerProfile() {
         ) : (
           <div className="space-y-4">
             {form.experience.map((x) => (
-              <div key={x.id} className="rounded-xl border border-gray-200 p-4 bg-gray-50/50">
+              <div
+                key={x.id}
+                className="rounded-xl border border-gray-200 p-4 bg-gray-50/50"
+              >
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Job title">
                     <input
                       value={x.title || ''}
-                      onChange={(e) => updateExperience(x.id, 'title', e.target.value)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'title', e.target.value)
+                      }
                       className="input"
                       placeholder="Frontend Engineer"
                     />
@@ -540,7 +563,9 @@ export default function JobSeekerProfile() {
                   <Field label="Company">
                     <input
                       value={x.company || ''}
-                      onChange={(e) => updateExperience(x.id, 'company', e.target.value)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'company', e.target.value)
+                      }
                       className="input"
                       placeholder="Acme Inc."
                     />
@@ -548,7 +573,9 @@ export default function JobSeekerProfile() {
                   <Field label="Location">
                     <input
                       value={x.location || ''}
-                      onChange={(e) => updateExperience(x.id, 'location', e.target.value)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'location', e.target.value)
+                      }
                       className="input"
                       placeholder="Remote"
                     />
@@ -557,7 +584,9 @@ export default function JobSeekerProfile() {
                     <input
                       type="month"
                       value={x.startDate || ''}
-                      onChange={(e) => updateExperience(x.id, 'startDate', e.target.value)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'startDate', e.target.value)
+                      }
                       className="input"
                     />
                   </Field>
@@ -565,7 +594,9 @@ export default function JobSeekerProfile() {
                     <input
                       type="month"
                       value={x.endDate || ''}
-                      onChange={(e) => updateExperience(x.id, 'endDate', e.target.value)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'endDate', e.target.value)
+                      }
                       className="input"
                       disabled={x.isCurrent}
                     />
@@ -574,7 +605,9 @@ export default function JobSeekerProfile() {
                     <input
                       type="checkbox"
                       checked={!!x.isCurrent}
-                      onChange={(e) => updateExperience(x.id, 'isCurrent', e.target.checked)}
+                      onChange={(e) =>
+                        updateExperience(x.id, 'isCurrent', e.target.checked)
+                      }
                     />
                     Currently working here
                   </label>
@@ -583,7 +616,9 @@ export default function JobSeekerProfile() {
                   <textarea
                     rows={3}
                     value={x.description || ''}
-                    onChange={(e) => updateExperience(x.id, 'description', e.target.value)}
+                    onChange={(e) =>
+                      updateExperience(x.id, 'description', e.target.value)
+                    }
                     className="input resize-none"
                     placeholder="What did you work on?"
                   />
@@ -621,12 +656,17 @@ export default function JobSeekerProfile() {
         ) : (
           <div className="space-y-4">
             {form.education.map((x) => (
-              <div key={x.id} className="rounded-xl border border-gray-200 p-4 bg-gray-50/50">
+              <div
+                key={x.id}
+                className="rounded-xl border border-gray-200 p-4 bg-gray-50/50"
+              >
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="School">
                     <input
                       value={x.school || ''}
-                      onChange={(e) => updateEducation(x.id, 'school', e.target.value)}
+                      onChange={(e) =>
+                        updateEducation(x.id, 'school', e.target.value)
+                      }
                       className="input"
                       placeholder="University of Lagos"
                     />
@@ -634,7 +674,9 @@ export default function JobSeekerProfile() {
                   <Field label="Degree">
                     <input
                       value={x.degree || ''}
-                      onChange={(e) => updateEducation(x.id, 'degree', e.target.value)}
+                      onChange={(e) =>
+                        updateEducation(x.id, 'degree', e.target.value)
+                      }
                       className="input"
                       placeholder="B.Sc."
                     />
@@ -642,7 +684,9 @@ export default function JobSeekerProfile() {
                   <Field label="Field of study">
                     <input
                       value={x.field || ''}
-                      onChange={(e) => updateEducation(x.id, 'field', e.target.value)}
+                      onChange={(e) =>
+                        updateEducation(x.id, 'field', e.target.value)
+                      }
                       className="input"
                       placeholder="Computer Science"
                     />
@@ -651,7 +695,9 @@ export default function JobSeekerProfile() {
                     <input
                       type="month"
                       value={x.startDate || ''}
-                      onChange={(e) => updateEducation(x.id, 'startDate', e.target.value)}
+                      onChange={(e) =>
+                        updateEducation(x.id, 'startDate', e.target.value)
+                      }
                       className="input"
                     />
                   </Field>
@@ -659,7 +705,9 @@ export default function JobSeekerProfile() {
                     <input
                       type="month"
                       value={x.endDate || ''}
-                      onChange={(e) => updateEducation(x.id, 'endDate', e.target.value)}
+                      onChange={(e) =>
+                        updateEducation(x.id, 'endDate', e.target.value)
+                      }
                       className="input"
                     />
                   </Field>
@@ -679,7 +727,10 @@ export default function JobSeekerProfile() {
       </Section>
 
       {/* Preferences */}
-      <Section title="Job Preferences" subtitle="What kind of role are you looking for?">
+      <Section
+        title="Job Preferences"
+        subtitle="What kind of role are you looking for?"
+      >
         <div className="grid sm:grid-cols-3 gap-4">
           <Field label="Expected salary (USD / year)">
             <input
@@ -760,7 +811,11 @@ export default function JobSeekerProfile() {
               disabled={uploading || extracting}
               className="btn-outline !py-2 !px-3 text-sm shrink-0"
             >
-              {uploading ? 'Uploading...' : extracting ? 'Reading...' : 'Replace'}
+              {uploading
+                ? 'Uploading...'
+                : extracting
+                ? 'Reading...'
+                : 'Replace'}
             </button>
           </div>
         ) : (
@@ -870,7 +925,9 @@ function Section({ title, subtitle, action, children }) {
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          {subtitle && (
+            <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+          )}
         </div>
         {action}
       </div>
