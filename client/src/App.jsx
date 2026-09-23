@@ -35,6 +35,7 @@ import AdminCompanies from './pages/admin/AdminCompanies'
 import AdminJobs from './pages/admin/AdminJobs'
 import AdminApplications from './pages/admin/AdminApplications'
 import AdminReports from './pages/admin/AdminReports'
+import AdminBroadcast from './pages/admin/AdminBroadcast'
 import ApplicantProfileView from './pages/ApplicantProfileView'
 import NotFound from './pages/NotFound'
 import About from './pages/About'
@@ -90,7 +91,7 @@ function App() {
         <Route path="privacy" element={<Privacy />} />
         <Route path="terms" element={<Terms />} />
         <Route path="security" element={<Security />} />
-        <Route path="/resume" element={<ResumeBuilder />} />
+        <Route path="resume" element={<ResumeBuilder />} />
 
         {/* ============================
             JOB SEEKER
@@ -309,6 +310,7 @@ function App() {
           <Route path="jobs" element={<AdminJobs />} />
           <Route path="applications" element={<AdminApplications />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="broadcast" element={<AdminBroadcast />} />
         </Route>
 
         {/* ============================

@@ -13,9 +13,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { db } from '../config/firebase'
 import { listMyJobs } from '../services/jobService'
-import { listMyInterviews } from '../services/interviewService'
 import NotificationBell from '../components/NotificationBell'
-import VerifyEmailBanner from '../components/VerifyEmailBanner'
 
 export default function EmployerDashboard() {
   const { user, profile } = useAuth()
@@ -34,22 +32,52 @@ export default function EmployerDashboard() {
     ;(async () => {
       if (!user) return
       try {
-        const [jobs, interviewsList] = await Promise.all([
-          listMyJobs(user.uid),
-          listMyInterviews(user.uid, 'employer'),
-        ])
-        if (!alive) return
-
+        // ---- Jobs ----
+        const jobs = await listMyJobs(user.uid).catch(() => [])
         const activeJobs = jobs.filter((j) => j.status === 'published').length
 
-        const appsSnap = await getDocs(
-          query(
+        // ---- Applications ----
+        let apps = []
+        try {
+          const q = query(
             collection(db, 'applications'),
             where('employerId', '==', user.uid)
           )
-        )
-        const apps = appsSnap.docs.map((d) => d.data())
+          const snap = await getDocs(q)
+          apps = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        } catch (err) {
+          console.warn('applications query failed:', err?.message)
+        }
 
+        // Fallback: if nothing found and user has a companyId, try that
+        if (apps.length === 0 && profile?.companyId) {
+          try {
+            const q = query(
+              collection(db, 'applications'),
+              where('companyId', '==', profile.companyId)
+            )
+            const snap = await getDocs(q)
+            const alt = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+            if (alt.length > 0) apps = alt
+          } catch (err) {
+            console.warn('applications by companyId failed:', err?.message)
+          }
+        }
+
+        if (!alive) return
+
+        // ---- Stats ----
+        // "Interviews" counts applications that have reached the interview stage.
+        // This matches what you see in the applicants pipeline.
+        const counts = {
+          activeJobs,
+          applicants: apps.length,
+          shortlisted: apps.filter((a) => a.status === 'shortlisted').length,
+          interviews: apps.filter((a) => a.status === 'interview').length,
+          hires: apps.filter((a) => a.status === 'hired').length,
+        }
+
+        // ---- Per-job counts for recent jobs list ----
         const countsByJob = {}
         apps.forEach((a) => {
           if (a.jobId) countsByJob[a.jobId] = (countsByJob[a.jobId] || 0) + 1
@@ -60,21 +88,10 @@ export default function EmployerDashboard() {
           applicantCount: countsByJob[j.id] || 0,
         }))
 
-        const totalApplicants = apps.length
-
-        const upcomingInterviews = interviewsList.filter(
-          (i) => i.status === 'scheduled'
-        ).length
-
-        if (!alive) return
-        setStats({
-          activeJobs,
-          applicants: totalApplicants,
-          shortlisted: apps.filter((a) => a.status === 'shortlisted').length,
-          interviews: upcomingInterviews,
-          hires: apps.filter((a) => a.status === 'hired').length,
-        })
+        setStats(counts)
         setRecentJobs(jobsWithCounts.slice(0, 4))
+      } catch (err) {
+        console.error('Dashboard load failed:', err)
       } finally {
         if (alive) setLoading(false)
       }
@@ -82,7 +99,7 @@ export default function EmployerDashboard() {
     return () => {
       alive = false
     }
-  }, [user])
+  }, [user, profile?.companyId])
 
   const cards = [
     {
@@ -114,28 +131,41 @@ export default function EmployerDashboard() {
 
   return (
     <div className="container-app py-6 sm:py-10">
-      <VerifyEmailBanner />
-
-      <div className="flex justify-between items-start sm:items-center mb-6 sm:mb-8 flex-wrap gap-3">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-extrabold">
-            Employer Dashboard
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm sm:text-base truncate">
-            Welcome, {profile?.fullName || user?.email}.
-          </p>
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold">
+              Employer Dashboard
+            </h1>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">
+              Welcome, {profile?.fullName || user?.email}.
+            </p>
+          </div>
+          {/* Bell only on desktop — mobile has one in the navbar */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <NotificationBell />
+          </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap shrink-0">
-          <NotificationBell />
-          <Link to="/employer/analytics" className="btn-outline">
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 mt-4">
+          <Link
+            to="/employer/analytics"
+            className="btn-outline flex-1 justify-center"
+          >
             <TrendingUp size={16} /> Analytics
           </Link>
-          <Link to="/employer/jobs/new" className="btn-primary">
+          <Link
+            to="/employer/jobs/new"
+            className="btn-primary flex-1 justify-center"
+          >
             <Plus size={16} /> Post a job
           </Link>
         </div>
       </div>
 
+      {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {cards.map((c) => (
           <div key={c.label} className="card">
@@ -156,6 +186,7 @@ export default function EmployerDashboard() {
         ))}
       </div>
 
+      {/* Recent jobs */}
       <div className="mt-8 sm:mt-10 card">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="text-lg font-bold">Recent jobs</h2>
@@ -174,9 +205,16 @@ export default function EmployerDashboard() {
             </Link>
           </div>
         </div>
+
         {recentJobs.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
             <p className="text-sm">No jobs posted yet.</p>
+            <Link
+              to="/employer/jobs/new"
+              className="btn-primary inline-flex mt-4"
+            >
+              <Plus size={16} /> Post your first job
+            </Link>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

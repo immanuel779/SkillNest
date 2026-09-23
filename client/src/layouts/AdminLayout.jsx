@@ -7,6 +7,7 @@ import {
   FileText,
   Flag,
   Shield,
+  Megaphone,
 } from 'lucide-react'
 
 const LINKS = [
@@ -16,6 +17,7 @@ const LINKS = [
   { to: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/admin/applications', label: 'Applications', icon: FileText },
   { to: '/admin/reports', label: 'Reports', icon: Flag },
+  { to: '/admin/broadcast', label: 'Broadcast', icon: Megaphone },
 ]
 
 export default function AdminLayout() {

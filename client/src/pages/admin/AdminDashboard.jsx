@@ -68,7 +68,13 @@ export default function AdminDashboard() {
       color: 'brand',
       to: null,
     },
-    { label: 'Hires', value: stats?.hires, icon: Trophy, color: 'accent', to: null },
+    {
+      label: 'Hires',
+      value: stats?.hires,
+      icon: Trophy,
+      color: 'accent',
+      to: null,
+    },
     {
       label: 'Open Reports',
       value: stats?.openReports,
@@ -80,14 +86,17 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      {/* Header — bell only on desktop */}
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-bold">Platform overview</h2>
           <p className="text-sm text-gray-500 mt-1">
             Real-time stats across the entire SkillNest platform.
           </p>
         </div>
-        <NotificationBell />
+        <div className="hidden sm:flex shrink-0">
+          <NotificationBell />
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -152,6 +161,12 @@ export default function AdminDashboard() {
               className="btn-outline !py-2 !px-3 text-sm"
             >
               Open reports
+            </Link>
+            <Link
+              to="/admin/broadcast"
+              className="btn-outline !py-2 !px-3 text-sm"
+            >
+              Send broadcast
             </Link>
           </div>
         </div>
