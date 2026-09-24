@@ -50,7 +50,8 @@ export default function CompanySpace() {
   const [tab, setTab] = useState('about')
   const [updateCount, setUpdateCount] = useState(0)
 
-  // Reviews state
+  const [followerCount, setFollowerCount] = useState(0)
+
   const [reviewCount, setReviewCount] = useState(0)
   const [showReview, setShowReview] = useState(false)
   const [canReview, setCanReview] = useState(false)
@@ -68,6 +69,7 @@ export default function CompanySpace() {
           return
         }
         setCompany(c)
+        setFollowerCount(c.followerCount || 0)
 
         if (!c.slug) {
           navigate(`/companies/${c.id}`, { replace: true })
@@ -88,7 +90,6 @@ export default function CompanySpace() {
     }
   }, [slug, navigate])
 
-  // Check review eligibility
   useEffect(() => {
     if (!company || !user || profile?.role !== 'job_seeker') {
       setCanReview(false)
@@ -146,19 +147,26 @@ export default function CompanySpace() {
     <div className="container-app py-8 max-w-5xl">
       {/* HERO */}
       <div className="card !p-0 overflow-hidden mb-6">
-        <div className="relative h-40 sm:h-52 bg-gradient-to-br from-brand-600 to-brand-900">
+        {/* Cover — clipped, sits BELOW the content layer */}
+        <div className="relative h-40 sm:h-52 bg-gradient-to-br from-brand-600 to-brand-900 overflow-hidden">
           {company.coverUrl && (
-            <img
-              src={company.coverUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <>
+              <img
+                src={company.coverUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Soft fade so logo always stands out */}
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+            </>
           )}
         </div>
 
-        <div className="px-5 sm:px-8 pb-6 -mt-12 sm:-mt-16">
+        {/* Content — pulled up over the cover, on top of it */}
+        <div className="relative z-10 px-5 sm:px-8 pb-6 -mt-14 sm:-mt-20">
           <div className="flex flex-col sm:flex-row items-start gap-5">
-            <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white border-4 border-white shadow-xl flex items-center justify-center overflow-hidden shrink-0">
+            {/* Logo — highest z-index so it sits above everything */}
+            <div className="relative z-20 w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white ring-4 ring-white shadow-2xl flex items-center justify-center overflow-hidden shrink-0">
               {company.logoUrl ? (
                 <img
                   src={company.logoUrl}
@@ -172,7 +180,7 @@ export default function CompanySpace() {
               )}
             </div>
 
-            <div className="flex-1 min-w-0 pt-2 sm:pt-16">
+            <div className="flex-1 min-w-0 pt-2 sm:pt-20">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
                   {company.name}
@@ -212,8 +220,13 @@ export default function CompanySpace() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 sm:pt-16">
-              <CompanyFollowButton companyId={company.id} />
+            <div className="flex flex-wrap gap-2 sm:pt-20 relative z-20">
+              <CompanyFollowButton
+                companyId={company.id}
+                onFollowChange={(delta) =>
+                  setFollowerCount((prev) => Math.max(0, prev + delta))
+                }
+              />
               <CompanyShareMenu url={publicUrl} title={company.name} />
             </div>
           </div>
@@ -227,10 +240,10 @@ export default function CompanySpace() {
             </div>
             <div>
               <span className="font-bold text-gray-900">
-                {formatCount(company.followerCount)}
+                {formatCount(followerCount)}
               </span>{' '}
               <span className="text-gray-500">
-                {company.followerCount === 1 ? 'follower' : 'followers'}
+                {followerCount === 1 ? 'follower' : 'followers'}
               </span>
             </div>
             {company.createdAt?.seconds && (
@@ -491,5 +504,4 @@ export default function CompanySpace() {
         />
       )}
     </div>
-  )
-}
+  )}

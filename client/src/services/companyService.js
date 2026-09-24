@@ -7,8 +7,10 @@ import {
   getDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   limit,
+  increment,
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { reserveSlug } from './slugService'
@@ -20,7 +22,6 @@ import { reserveSlug } from './slugService'
 export async function getMyCompany(uid) {
   if (!uid) return null
 
-  // 1) Does this user own a company?
   const q = query(collection(db, 'companies'), where('ownerId', '==', uid))
   const snap = await getDocs(q)
 
@@ -28,7 +29,6 @@ export async function getMyCompany(uid) {
     const d = snap.docs[0]
     const company = { id: d.id, ...d.data() }
 
-    // Backfill the owner's user doc if companyId / teamRole are missing
     try {
       const userRef = doc(db, 'users', uid)
       const userSnap = await getDoc(userRef)
@@ -46,13 +46,12 @@ export async function getMyCompany(uid) {
         }
       }
     } catch {
-      /* best-effort — don't block the caller */
+      /* best-effort */
     }
 
     return company
   }
 
-  // 2) Fall back to companyId on the user doc (recruiters/viewers)
   try {
     const userSnap = await getDoc(doc(db, 'users', uid))
     const companyId = userSnap.exists() ? userSnap.data().companyId : null
@@ -78,7 +77,6 @@ export async function createCompany(uid, data) {
     updatedAt: serverTimestamp(),
   })
 
-  // Tag the owner on their user doc so rules can check membership
   try {
     await updateDoc(doc(db, 'users', uid), {
       companyId: ref.id,
@@ -104,20 +102,64 @@ export async function getCompany(companyId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null
 }
 
+/**
+ * Look up a company by slug.
+ *
+ * Tries several slug variations so URLs like:
+ *   /c/codecraft
+ *   /c/Codecraft
+ *   /c/codecraft-technologies
+ *   /c/codecrafttechnologies
+ * all find the same company.
+ *
+ * Also falls back to treating the slug as a company doc ID.
+ */
 export async function getCompanyBySlug(slug) {
   if (!slug) return null
-  const q = query(
-    collection(db, 'companies'),
-    where('slug', '==', slug),
-    limit(1)
-  )
-  const snap = await getDocs(q)
-  if (snap.empty) return null
-  const d = snap.docs[0]
-  return { id: d.id, ...d.data() }
+
+  const raw = slug.toString().trim()
+
+  // Build variations to try
+  const variations = new Set()
+  variations.add(raw)
+  variations.add(raw.toLowerCase())
+  variations.add(raw.toLowerCase().replace(/[\s_-]+/g, ''))
+  variations.add(raw.toLowerCase().replace(/\s+/g, '-'))
+  variations.add(raw.toLowerCase().replace(/_/g, '-'))
+  variations.add(raw.toLowerCase().replace(/-/g, ''))
+
+  // Try each variation against the slug field
+  for (const v of variations) {
+    if (!v) continue
+    try {
+      const q = query(
+        collection(db, 'companies'),
+        where('slug', '==', v),
+        limit(1)
+      )
+      const snap = await getDocs(q)
+      if (!snap.empty) {
+        const d = snap.docs[0]
+        return { id: d.id, ...d.data() }
+      }
+    } catch (err) {
+      console.warn('slug lookup failed for', v, err?.message)
+    }
+  }
+
+  // Fallback: treat the slug as a company ID (in case someone shares /c/{id})
+  try {
+    const snap = await getDoc(doc(db, 'companies', raw))
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return null
 }
 
-/** Reserve a slug and save it to the company doc in one call. */
 export async function setCompanySlug(companyId, ownerUid, desiredSlug, oldSlug) {
   const finalSlug = await reserveSlug(companyId, desiredSlug, ownerUid)
   await updateCompany(companyId, {
@@ -127,10 +169,109 @@ export async function setCompanySlug(companyId, ownerUid, desiredSlug, oldSlug) 
   return finalSlug
 }
 
+/* ============================================================
+   FOLLOWERS
+   ============================================================ */
+
+/** Returns the follower doc id if the user follows the company, else null. */
+export async function getFollowDoc(companyId, userId) {
+  if (!companyId || !userId) return null
+  const q = query(
+    collection(db, 'companyFollowers'),
+    where('companyId', '==', companyId),
+    where('userId', '==', userId),
+    limit(1)
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  return { id: snap.docs[0].id, ...snap.docs[0].data() }
+}
+
+export async function isFollowingCompany(companyId, userId) {
+  const doc = await getFollowDoc(companyId, userId)
+  return !!doc
+}
+
 /**
- * Fetch top companies for the landing page.
- * Sorted by follower count, then by name.
+ * Follow a company. Idempotent:
+ *  - if already following, does nothing
+ *  - otherwise creates the follower doc and increments followerCount atomically
  */
+export async function followCompany(companyId, userId) {
+  if (!companyId || !userId) throw new Error('Missing ids')
+
+  const existing = await getFollowDoc(companyId, userId)
+  if (existing) return { alreadyFollowing: true }
+
+  await addDoc(collection(db, 'companyFollowers'), {
+    companyId,
+    userId,
+    createdAt: serverTimestamp(),
+  })
+
+  try {
+    await updateDoc(doc(db, 'companies', companyId), {
+      followerCount: increment(1),
+    })
+  } catch (err) {
+    console.warn('followerCount increment failed:', err?.message)
+  }
+
+  return { alreadyFollowing: false }
+}
+
+/**
+ * Unfollow. Idempotent:
+ *  - if not following, does nothing
+ *  - otherwise deletes the follower doc and decrements followerCount
+ */
+export async function unfollowCompany(companyId, userId) {
+  if (!companyId || !userId) throw new Error('Missing ids')
+
+  const existing = await getFollowDoc(companyId, userId)
+  if (!existing) return { wasFollowing: false }
+
+  await deleteDoc(doc(db, 'companyFollowers', existing.id))
+
+  try {
+    await updateDoc(doc(db, 'companies', companyId), {
+      followerCount: increment(-1),
+    })
+  } catch (err) {
+    console.warn('followerCount decrement failed:', err?.message)
+  }
+
+  return { wasFollowing: true }
+}
+
+/**
+ * Self-heal: count real follower docs and reconcile the stored followerCount.
+ * Call this once from company page load if you suspect drift.
+ */
+export async function syncFollowerCount(companyId) {
+  if (!companyId) return 0
+  const q = query(
+    collection(db, 'companyFollowers'),
+    where('companyId', '==', companyId)
+  )
+  const snap = await getDocs(q)
+  const realCount = snap.size
+
+  try {
+    await updateDoc(doc(db, 'companies', companyId), {
+      followerCount: realCount,
+    })
+  } catch {
+    /* best-effort */
+  }
+
+  return realCount
+}
+
+/* ============================================================
+   LISTS
+   ============================================================ */
+
 export async function listFeaturedCompanies(max = 6) {
   try {
     const snap = await getDocs(collection(db, 'companies'))
@@ -151,10 +292,6 @@ export async function listFeaturedCompanies(max = 6) {
   }
 }
 
-/**
- * Fetch every company that has a public slug.
- * Returns them sorted by follower count (descending), then name.
- */
 export async function listAllPublicCompanies() {
   try {
     const snap = await getDocs(collection(db, 'companies'))
@@ -175,10 +312,6 @@ export async function listAllPublicCompanies() {
   }
 }
 
-/**
- * List all members of a company (users whose companyId matches).
- * Owner first, then recruiters, then viewers.
- */
 export async function listTeamMembers(companyId) {
   try {
     const q = query(
@@ -199,7 +332,6 @@ export async function listTeamMembers(companyId) {
   }
 }
 
-/** Remove a team member (unset companyId + teamRole on their user doc). */
 export async function removeTeamMember(userId) {
   await updateDoc(doc(db, 'users', userId), {
     companyId: null,
@@ -208,7 +340,6 @@ export async function removeTeamMember(userId) {
   })
 }
 
-/** Change a member's role. */
 export async function updateTeamRole(userId, role) {
   await updateDoc(doc(db, 'users', userId), {
     teamRole: role,

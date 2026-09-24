@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCheck, Inbox, Trash2 } from 'lucide-react'
+import { Bell, CheckCheck, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {
   subscribeNotifications,
@@ -8,12 +8,21 @@ import {
   markAllNotificationsRead,
   deleteNotification,
 } from '../services/notificationService'
+import NotificationDetailModal from '../components/NotificationDetailModal'
 
 const ICONS = {
   new_application: '📩',
   application_status: '📊',
   message: '💬',
   interview: '📅',
+  admin_new_application: '📥',
+  admin_status_change: '📊',
+  admin_new_job: '💼',
+  admin_new_user: '👤',
+  new_job: '🔔',
+  company_update: '📣',
+  platform_announcement: '📢',
+  system: '🔔',
 }
 
 export default function Notifications() {
@@ -21,6 +30,7 @@ export default function Notifications() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [active, setActive] = useState(null)
 
   useEffect(() => {
     if (!user) return
@@ -34,8 +44,18 @@ export default function Notifications() {
   const unread = items.filter((n) => !n.isRead)
 
   const open = (n) => {
-    markNotificationRead(n.id)
-    if (n.link) navigate(n.link)
+    if (!n.isRead) markNotificationRead(n.id).catch(() => {})
+    setActive(n)
+  }
+
+  const handleDelete = async (e, n) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this notification?')) return
+    try {
+      await deleteNotification(n.id)
+    } catch {
+      /* silent */
+    }
   }
 
   return (
@@ -82,15 +102,27 @@ export default function Notifications() {
                 onClick={() => open(n)}
                 className="flex-1 flex items-start gap-3 text-left min-w-0"
               >
-                <span className="text-2xl shrink-0">{ICONS[n.type] || '🔔'}</span>
+                <span className="text-2xl shrink-0">
+                  {ICONS[n.type] || '🔔'}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`text-sm ${!n.isRead ? 'font-bold' : 'font-medium'} text-gray-900`}>
+                    <p
+                      className={`text-sm ${
+                        !n.isRead ? 'font-bold' : 'font-medium'
+                      } text-gray-900`}
+                    >
                       {n.title}
                     </p>
-                    {!n.isRead && <span className="w-2 h-2 rounded-full bg-accent-500 shrink-0" />}
+                    {!n.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-accent-500 shrink-0" />
+                    )}
                   </div>
-                  {n.body && <p className="text-sm text-gray-600 mt-0.5">{n.body}</p>}
+                  {n.body && (
+                    <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">
+                      {n.body}
+                    </p>
+                  )}
                   {n.createdAt?.seconds && (
                     <p className="text-[11px] text-gray-400 mt-1">
                       {new Date(n.createdAt.seconds * 1000).toLocaleString()}
@@ -99,8 +131,8 @@ export default function Notifications() {
                 </div>
               </button>
               <button
-                onClick={() => deleteNotification(n.id)}
-                className="shrink-0 text-gray-300 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition"
+                onClick={(e) => handleDelete(e, n)}
+                className="shrink-0 text-gray-300 hover:text-red-600 p-1 sm:opacity-0 sm:group-hover:opacity-100 transition"
                 aria-label="Delete"
               >
                 <Trash2 size={14} />
@@ -109,6 +141,13 @@ export default function Notifications() {
           ))}
         </div>
       )}
+
+      {/* Detail modal */}
+      <NotificationDetailModal
+        notification={active}
+        onClose={() => setActive(null)}
+        onOpenLink={(link) => navigate(link)}
+      />
     </div>
   )
 }
