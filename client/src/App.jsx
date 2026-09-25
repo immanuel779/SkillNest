@@ -55,6 +55,7 @@ import Companies from './pages/Companies'
 import { useInterviewReminders } from './hooks/useInterviewReminders'
 import { useJobAlerts } from './hooks/useJobAlerts'
 import ResumeBuilder from './pages/ResumeBuilder'
+import AdminEmma from './pages/admin/AdminEmma'
 
 function App() {
   useInterviewReminders()
@@ -311,6 +312,7 @@ function App() {
           <Route path="applications" element={<AdminApplications />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="broadcast" element={<AdminBroadcast />} />
+          <Route path="emma" element={<AdminEmma />} />
         </Route>
 
         {/* ============================

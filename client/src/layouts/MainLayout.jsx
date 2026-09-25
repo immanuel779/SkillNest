@@ -6,6 +6,7 @@ import ScrollToTop from '../components/ScrollToTop'
 import ShortcutHelpModal from '../components/ShortcutHelpModal'
 import CommandPalette from '../components/CommandPalette'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import EmmaChatWidget from '../components/emma/EmmaChatWidget'
 
 export default function MainLayout() {
   const [showHelp, setShowHelp] = useState(false)
@@ -29,6 +30,7 @@ export default function MainLayout() {
       {showPalette && (
         <CommandPalette onClose={() => setShowPalette(false)} />
       )}
+      <EmmaChatWidget />
     </div>
   )
 }

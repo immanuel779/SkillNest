@@ -8,6 +8,7 @@ import {
   Flag,
   Shield,
   Megaphone,
+   Sparkles, 
 } from 'lucide-react'
 
 const LINKS = [
@@ -18,6 +19,7 @@ const LINKS = [
   { to: '/admin/applications', label: 'Applications', icon: FileText },
   { to: '/admin/reports', label: 'Reports', icon: Flag },
   { to: '/admin/broadcast', label: 'Broadcast', icon: Megaphone },
+  { to: '/admin/emma', label: 'Emma AI', icon: Sparkles },
 ]
 
 export default function AdminLayout() {
