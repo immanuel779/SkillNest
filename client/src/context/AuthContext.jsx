@@ -42,8 +42,7 @@ export function AuthProvider({ children }) {
     return unsubscribe
   }, [])
 
-  // Real-time listener on the current user's profile.
-  // If they get suspended while logged in, we sign them out immediately.
+  // Real-time listener on the current user's profile
   useEffect(() => {
     if (!user) return
 
@@ -58,13 +57,10 @@ export function AuthProvider({ children }) {
         const data = snap.data()
 
         if (data.isSuspended === true) {
-          // Flag the reason so the login page can display it
           setSuspendedNotice(true)
           try {
             await signOut(auth)
-          } catch {
-            /* ignore */
-          }
+          } catch { /* ignore */ }
           setProfile(null)
           return
         }
@@ -73,7 +69,8 @@ export function AuthProvider({ children }) {
         setLoading(false)
       },
       (err) => {
-        console.warn('Profile listener error:', err)
+        // SAFE ERROR HANDLER: Prevents app crash if rules block the read
+        console.warn('Profile listener blocked or failed:', err.message)
         setLoading(false)
       }
     )
@@ -107,16 +104,12 @@ export function AuthProvider({ children }) {
         body: `${fullName || email} signed up as ${role.replace('_', ' ')}.`,
         link: '/admin/users',
       })
-    } catch {
-      /* best-effort */
-    }
+    } catch { /* best-effort */ }
 
     return cred.user
   }
 
-  const login = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password)
-
+  const login = (email, password) => signInWithEmailAndPassword(auth, email, password)
   const logout = () => signOut(auth)
 
   const refreshProfile = async () => {

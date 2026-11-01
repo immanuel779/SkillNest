@@ -8,7 +8,10 @@ import {
   Flag,
   Shield,
   Megaphone,
-   Sparkles, 
+  Sparkles,
+  Palette,
+  MessagesSquare,
+  ShieldCheck,
 } from 'lucide-react'
 
 const LINKS = [
@@ -18,6 +21,10 @@ const LINKS = [
   { to: '/admin/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/admin/applications', label: 'Applications', icon: FileText },
   { to: '/admin/reports', label: 'Reports', icon: Flag },
+  { to: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },
+  { to: '/admin/ad-submissions', label: 'Ads', icon: Megaphone },
+  { to: '/admin/landing', label: 'Landing', icon: Palette },
+  { to: '/admin/community', label: 'Community', icon: MessagesSquare },
   { to: '/admin/broadcast', label: 'Broadcast', icon: Megaphone },
   { to: '/admin/emma', label: 'Emma AI', icon: Sparkles },
 ]

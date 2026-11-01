@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { listMySavedSearches, matchesSearch, markSearchAlerted } from '../services/savedSearchService'
+import {
+  listMySavedSearches,
+  matchesSearch,
+  markSearchAlerted,
+} from '../services/savedSearchService'
 import { listPublishedJobs } from '../services/jobService'
 import { createNotification } from '../services/notificationService'
 
@@ -60,8 +64,8 @@ export function useJobAlerts() {
         }
 
         hasRunRef.current = true
-      } catch (err) {
-        console.warn('Job alerts check failed:', err)
+      } catch {
+        /* silent — permission denied or empty */
       }
     })()
 

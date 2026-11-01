@@ -56,6 +56,19 @@ import { useInterviewReminders } from './hooks/useInterviewReminders'
 import { useJobAlerts } from './hooks/useJobAlerts'
 import ResumeBuilder from './pages/ResumeBuilder'
 import AdminEmma from './pages/admin/AdminEmma'
+import Community from './pages/Community'
+import Advertise from './pages/Advertise'
+import AdminAdSubmissions from './pages/admin/AdminAdSubmissions'
+import EmployerVerification from './pages/EmployerVerification'
+import EmployerCandidates from './pages/EmployerSavedCandidates'
+import EmployerTalentInbox from './pages/EmployerTalentInbox'
+import EmployerUpgrade from './pages/EmployerUpgrade'
+import AdminVerifications from './pages/admin/AdminVerifications'
+import EmployerCandidateAlerts from './pages/EmployerCandidateAlerts'
+import EmployerSettings from './pages/EmployerSettings'
+import AdminCommunity from './pages/AdminCommunity'
+import AdminLanding from './pages/AdminLanding'
+
 
 function App() {
   useInterviewReminders()
@@ -80,6 +93,7 @@ function App() {
 
         {/* Accept team invite — public so invited users can sign in first */}
         <Route path="accept-invite/:token" element={<AcceptInvite />} />
+        <Route path="/employer/settings" element={<EmployerSettings />} />
 
         {/* Static pages */}
         <Route path="about" element={<About />} />
@@ -93,6 +107,11 @@ function App() {
         <Route path="terms" element={<Terms />} />
         <Route path="security" element={<Security />} />
         <Route path="resume" element={<ResumeBuilder />} />
+
+        <Route path="advertise" element={<Advertise />} />
+        <Route path="/employer/alerts" element={<EmployerCandidateAlerts />} />
+        <Route path="/admin/community" element={<AdminCommunity />} />
+<Route path="/admin/landing" element={<AdminLanding />} />
 
         {/* ============================
             JOB SEEKER
@@ -137,6 +156,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="community"
+  element={
+    <ProtectedRoute>
+      <Community />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="searches"
           element={
@@ -245,6 +272,10 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="employer/verification" element={<ProtectedRoute allowRoles={['employer']}><EmployerVerification /></ProtectedRoute>} />
+<Route path="employer/candidates" element={<ProtectedRoute allowRoles={['employer']}><EmployerCandidates /></ProtectedRoute>} />
+<Route path="employer/talent-inbox" element={<ProtectedRoute allowRoles={['employer']}><EmployerTalentInbox /></ProtectedRoute>} />
+<Route path="employer/upgrade" element={<ProtectedRoute allowRoles={['employer']}><EmployerUpgrade /></ProtectedRoute>} />
 
         {/* ============================
             SHARED (any authenticated user)
@@ -313,6 +344,8 @@ function App() {
           <Route path="reports" element={<AdminReports />} />
           <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="emma" element={<AdminEmma />} />
+          <Route path="ad-submissions" element={<AdminAdSubmissions />} />
+          <Route path="verifications" element={<AdminVerifications />} />
         </Route>
 
         {/* ============================

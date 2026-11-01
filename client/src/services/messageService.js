@@ -223,16 +223,28 @@ export async function listMyConversations(uid) {
   return sortByLastActivity(items)
 }
 
+/* ============================================================
+   SUBSCRIPTIONS — all have error handlers so permission denials
+   are silently ignored instead of crashing the app.
+   ============================================================ */
+
 export function subscribeConversations(uid, callback) {
   const q = query(
     collection(db, 'conversations'),
     where('participants', 'array-contains', uid)
   )
-  return onSnapshot(q, (snap) => {
-    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    sortByLastActivity(items)
-    callback(items)
-  })
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      sortByLastActivity(items)
+      callback(items)
+    },
+    () => {
+      /* silent — user not signed in or permission denied */
+      callback([])
+    }
+  )
 }
 
 export function subscribeAllConversations(callback) {
@@ -244,10 +256,7 @@ export function subscribeAllConversations(callback) {
       sortByLastActivity(items)
       callback(items)
     },
-    (err) => {
-      console.warn('subscribeAllConversations failed:', err?.message)
-      callback([])
-    }
+    () => callback([])
   )
 }
 
@@ -265,10 +274,7 @@ export function subscribeAllUnreadByConversation(callback) {
       })
       callback(map)
     },
-    (err) => {
-      console.warn('subscribeAllUnreadByConversation failed:', err?.message)
-      callback({})
-    }
+    () => callback({})
   )
 }
 
@@ -277,15 +283,19 @@ export function subscribeMessages(convId, callback) {
     collection(db, 'messages'),
     where('conversationId', '==', convId)
   )
-  return onSnapshot(q, (snap) => {
-    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    items.sort((a, b) => {
-      const ta = a.createdAt?.seconds || 0
-      const tb = b.createdAt?.seconds || 0
-      return ta - tb
-    })
-    callback(items)
-  })
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      items.sort((a, b) => {
+        const ta = a.createdAt?.seconds || 0
+        const tb = b.createdAt?.seconds || 0
+        return ta - tb
+      })
+      callback(items)
+    },
+    () => callback([])
+  )
 }
 
 export async function markConversationRead(convId, uid) {
@@ -302,10 +312,14 @@ export async function markConversationRead(convId, uid) {
 
 export function subscribeUnreadMessageCount(uid, callback) {
   const q = query(collection(db, 'messages'), where('recipientId', '==', uid))
-  return onSnapshot(q, (snap) => {
-    const unread = snap.docs.filter((d) => !d.data().isRead).length
-    callback(unread)
-  })
+  return onSnapshot(
+    q,
+    (snap) => {
+      const unread = snap.docs.filter((d) => !d.data().isRead).length
+      callback(unread)
+    },
+    () => callback(0)
+  )
 }
 
 export function subscribeUnreadByConversation(uid, callback) {
@@ -314,16 +328,20 @@ export function subscribeUnreadByConversation(uid, callback) {
     where('recipientId', '==', uid),
     where('isRead', '==', false)
   )
-  return onSnapshot(q, (snap) => {
-    const map = {}
-    snap.docs.forEach((d) => {
-      const m = d.data()
-      const cid = m.conversationId
-      if (!cid) return
-      map[cid] = (map[cid] || 0) + 1
-    })
-    callback(map)
-  })
+  return onSnapshot(
+    q,
+    (snap) => {
+      const map = {}
+      snap.docs.forEach((d) => {
+        const m = d.data()
+        const cid = m.conversationId
+        if (!cid) return
+        map[cid] = (map[cid] || 0) + 1
+      })
+      callback(map)
+    },
+    () => callback({})
+  )
 }
 
 export async function getChatParticipantProfile(uid) {

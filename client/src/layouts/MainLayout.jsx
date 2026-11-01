@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
+import Footer from '../components/layout/Footer' // Only import the new one
 import ScrollToTop from '../components/ScrollToTop'
 import ShortcutHelpModal from '../components/ShortcutHelpModal'
 import CommandPalette from '../components/CommandPalette'
@@ -24,6 +24,8 @@ export default function MainLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      
+      {/* Just render the Footer. It fetches its own config now. */}
       <Footer />
 
       {showHelp && <ShortcutHelpModal onClose={() => setShowHelp(false)} />}

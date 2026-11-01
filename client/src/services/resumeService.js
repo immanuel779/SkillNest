@@ -12,6 +12,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
+const DEFAULT_SECTION_ORDER = [
+  'summary',
+  'experience',
+  'projects',
+  'education',
+  'skills',
+]
+
 /** Get the user's primary resume (or null). */
 export async function getMyResume(uid) {
   if (!uid) return null
@@ -19,10 +27,15 @@ export async function getMyResume(uid) {
     const q = query(collection(db, 'resumes'), where('userId', '==', uid))
     const snap = await getDocs(q)
     if (snap.empty) return null
-    // newest first
+    
     const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     list.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
-    return list[0]
+
+    const resume = list[0]
+    if (!resume.sectionOrder) resume.sectionOrder = [...DEFAULT_SECTION_ORDER]
+    if (!resume.fontFamily) resume.fontFamily = 'sans-serif'
+
+    return resume
   } catch {
     return null
   }
@@ -63,6 +76,9 @@ export function emptyResume(profile) {
   return {
     template: 'modern',
     accentColor: '#6d28d9',
+    fontFamily: 'sans-serif',
+    sectionOrder: [...DEFAULT_SECTION_ORDER],
+    hiddenSections: [],
     basics: {
       fullName: p.fullName || '',
       headline: p.headline || '',
@@ -72,6 +88,9 @@ export function emptyResume(profile) {
       website: p.portfolioUrl || '',
       linkedin: p.linkedinUrl || '',
       github: p.githubUrl || '',
+      instagram: '', // 👈 NEW
+      tiktok: '',    // 👈 NEW
+      facebook: '',  // 👈 NEW
     },
     summary: p.about || '',
     experience: (p.experience || []).map((x) => ({

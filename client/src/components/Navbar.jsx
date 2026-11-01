@@ -7,6 +7,7 @@ import {
   Settings as SettingsIcon,
   Keyboard,
   Search,
+  Users,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
@@ -84,7 +85,6 @@ export default function Navbar() {
         { name: 'Updates', path: '/employer/updates' },
         { name: 'Interviews', path: '/employer/interviews' },
         { name: 'Team', path: '/employer/team' },
-        
       ]
     }
     return [
@@ -94,7 +94,7 @@ export default function Navbar() {
       { name: 'Saved', path: '/saved-jobs' },
       { name: 'Searches', path: '/searches' },
       { name: 'Interviews', path: '/interviews' },
-       { name: 'Resume', path: '/resume' },  
+      { name: 'Resume', path: '/resume' },
     ]
   })()
 
@@ -173,6 +173,15 @@ export default function Navbar() {
                   </NavLink>
                 ))}
 
+                {/* Community */}
+                <NavLink
+                  to="/community"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-brand-700 dark:hover:text-brand-400 transition-colors whitespace-nowrap"
+                >
+                  <Users size={14} />
+                  Community
+                </NavLink>
+
                 <Link
                   to="/messages"
                   className="relative text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-brand-700 dark:hover:text-brand-400 transition-colors whitespace-nowrap"
@@ -214,10 +223,8 @@ export default function Navbar() {
                   </kbd>
                 </button>
 
-                {/* Theme toggle */}
                 <ThemeMenuButton />
 
-                {/* Keyboard shortcuts help */}
                 <button
                   onClick={openShortcutsHelp}
                   className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
@@ -352,6 +359,17 @@ export default function Navbar() {
                       {link.name}
                     </Link>
                   ))}
+
+                  {/* Community — mobile */}
+                  <Link
+                    to="/community"
+                    onClick={close}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-white/60 dark:hover:bg-gray-800 font-medium transition-colors"
+                  >
+                    <Users size={15} />
+                    <span>Community</span>
+                  </Link>
+
                   <Link
                     to="/messages"
                     onClick={close}

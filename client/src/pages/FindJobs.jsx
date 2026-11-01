@@ -19,6 +19,7 @@ import { createSavedSearch } from '../services/savedSearchService'
 import AIJobMatchBadge from '../components/ai/AIJobMatchBadge'
 import { SkeletonList } from '../components/Skeletons'
 import { friendlyError } from '../utils/errors'
+import { formatSalaryRange } from '../utils/currency'
 
 const JOB_TYPES = [
   { v: '', l: 'All types' },
@@ -361,81 +362,85 @@ export default function FindJobs() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filtered.map((j) => (
-            <Link
-              key={j.id}
-              to={`/jobs/${j.id}`}
-              className="card card-hover block group"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
-                      {j.title}
-                    </h3>
-                    <span className="badge bg-brand-50 text-brand-700 border border-brand-100">
-                      {j.jobType?.replace('_', ' ')}
-                    </span>
-                    <span className="badge bg-gray-100 text-gray-600">
-                      {j.workMode}
-                    </span>
-                    {/* AI match badge — only for signed-in job seekers */}
-                    {user && profile?.role === 'job_seeker' && (
-                      <AIJobMatchBadge
-                        job={j}
-                        candidate={{ ...profile, uid: user.uid }}
-                        compact
-                      />
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1 font-medium inline-flex items-center gap-1.5">
-                    {j.companyName}
-                    {j.companyVerified && (
-                      <BadgeCheck size={13} className="text-blue-600" />
-                    )}
-                  </p>
-                  <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin size={12} /> {j.location || '—'}
-                    </span>
-                    <span>{j.experienceLevel} level</span>
-                    {(j.salaryMin || j.salaryMax) && (
-                      <span className="font-semibold text-gray-700">
-                        {j.currency || 'USD'}{' '}
-                        {j.salaryMin?.toLocaleString?.() || '—'} –{' '}
-                        {j.salaryMax?.toLocaleString?.() || '—'}
+          {filtered.map((j) => {
+            const salaryText = formatSalaryRange(
+              j.currency,
+              j.salaryMin,
+              j.salaryMax
+            )
+            return (
+              <Link
+                key={j.id}
+                to={`/jobs/${j.id}`}
+                className="card card-hover block group"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
+                        {j.title}
+                      </h3>
+                      <span className="badge bg-brand-50 text-brand-700 border border-brand-100">
+                        {j.jobType?.replace('_', ' ')}
                       </span>
+                      <span className="badge bg-gray-100 text-gray-600">
+                        {j.workMode}
+                      </span>
+                      {user && profile?.role === 'job_seeker' && (
+                        <AIJobMatchBadge
+                          job={j}
+                          candidate={{ ...profile, uid: user.uid }}
+                          compact
+                        />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 font-medium inline-flex items-center gap-1.5">
+                      {j.companyName}
+                      {j.companyVerified && (
+                        <BadgeCheck size={13} className="text-blue-600" />
+                      )}
+                    </p>
+                    <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={12} /> {j.location || '—'}
+                      </span>
+                      <span>{j.experienceLevel} level</span>
+                      {salaryText && (
+                        <span className="font-semibold text-gray-700">
+                          {salaryText}
+                        </span>
+                      )}
+                    </div>
+                    {j.skills?.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {j.skills.slice(0, 6).map((s) => (
+                          <span
+                            key={s}
+                            className="text-[11px] bg-brand-50 text-brand-700 border border-brand-100 rounded-md px-2 py-0.5"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {j.skills?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {j.skills.slice(0, 6).map((s) => (
-                        <span
-                          key={s}
-                          className="text-[11px] bg-brand-50 text-brand-700 border border-brand-100 rounded-md px-2 py-0.5"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
+                  {user && (
+                    <button
+                      onClick={(e) => toggleSave(e, j)}
+                      className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition"
+                      aria-label="Save"
+                    >
+                      {savedMap[j.id] ? (
+                        <BookmarkCheck size={18} className="text-brand-700" />
+                      ) : (
+                        <Bookmark size={18} />
+                      )}
+                    </button>
                   )}
                 </div>
-                {user && (
-                  <button
-                    onClick={(e) => toggleSave(e, j)}
-                    className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand-700 hover:bg-brand-50 transition"
-                    aria-label="Save"
-                  >
-                    {savedMap[j.id] ? (
-                      <BookmarkCheck size={18} className="text-brand-700" />
-                    ) : (
-                      <Bookmark size={18} />
-                    )}
-                  </button>
-                )}
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       )}
 

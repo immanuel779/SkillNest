@@ -10,10 +10,12 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  Banknote,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { listMyJobs, updateJob, deleteJob } from '../services/jobService'
 import { countApplicationsByEmployer } from '../services/applicationService'
+import { formatSalaryRange } from '../utils/currency'
 
 function StatusBadge({ status }) {
   const styles = {
@@ -38,9 +40,6 @@ export default function EmployerJobs() {
     try {
       const list = await listMyJobs(user.uid)
 
-      // Fetch REAL counts from the applications collection.
-      // Overrides the denormalized job.applicantCount, which may be
-      // stale or missing for older jobs.
       let realCounts = {}
       try {
         realCounts = await countApplicationsByEmployer(
@@ -133,75 +132,87 @@ export default function EmployerJobs() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {jobs.map((j) => (
-            <div key={j.id} className="card">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {j.title}
-                    </h3>
-                    <StatusBadge status={j.status} />
+          {jobs.map((j) => {
+            const salaryText = formatSalaryRange(
+              j.currency,
+              j.salaryMin,
+              j.salaryMax
+            )
+            return (
+              <div key={j.id} className="card">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {j.title}
+                      </h3>
+                      <StatusBadge status={j.status} />
+                    </div>
+                    <div className="mt-1 text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin size={12} /> {j.location || '—'}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Users size={12} /> {j.applicantCount || 0}{' '}
+                        {j.applicantCount === 1 ? 'applicant' : 'applicants'}
+                      </span>
+                      {salaryText && (
+                        <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
+                          <Banknote size={12} /> {salaryText}
+                        </span>
+                      )}
+                      <span>
+                        {j.jobType?.replace('_', ' ')} · {j.workMode}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin size={12} /> {j.location || '—'}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Users size={12} /> {j.applicantCount || 0}{' '}
-                      {j.applicantCount === 1 ? 'applicant' : 'applicants'}
-                    </span>
-                    <span>
-                      {j.jobType?.replace('_', ' ')} · {j.workMode}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  <Link
-                    to={`/employer/jobs/${j.id}/applicants`}
-                    className="btn-outline !py-2 !px-3 text-sm"
-                  >
-                    <Users size={14} /> Applicants
-                  </Link>
-                  <Link
-                    to={`/employer/jobs/${j.id}/edit`}
-                    className="btn-outline !py-2 !px-3 text-sm"
-                  >
-                    <Pencil size={14} /> Edit
-                  </Link>
-                  <button
-                    onClick={() => togglePublish(j)}
-                    className="btn-outline !py-2 !px-3 text-sm"
-                  >
-                    {j.status === 'published' ? (
-                      <>
-                        <EyeOff size={14} /> Unpublish
-                      </>
-                    ) : (
-                      <>
-                        <Eye size={14} /> Publish
-                      </>
-                    )}
-                  </button>
-                  {j.status !== 'closed' && (
-                    <button
-                      onClick={() => close(j)}
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <Link
+                      to={`/employer/jobs/${j.id}/applicants`}
                       className="btn-outline !py-2 !px-3 text-sm"
                     >
-                      <CheckCircle2 size={14} /> Close
+                      <Users size={14} /> Applicants
+                    </Link>
+                    <Link
+                      to={`/employer/jobs/${j.id}/edit`}
+                      className="btn-outline !py-2 !px-3 text-sm"
+                    >
+                      <Pencil size={14} /> Edit
+                    </Link>
+                    <button
+                      onClick={() => togglePublish(j)}
+                      className="btn-outline !py-2 !px-3 text-sm"
+                    >
+                      {j.status === 'published' ? (
+                        <>
+                          <EyeOff size={14} /> Unpublish
+                        </>
+                      ) : (
+                        <>
+                          <Eye size={14} /> Publish
+                        </>
+                      )}
                     </button>
-                  )}
-                  <button
-                    onClick={() => remove(j)}
-                    className="btn-outline !py-2 !px-3 text-sm !text-red-600 !border-red-200"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                    {j.status !== 'closed' && (
+                      <button
+                        onClick={() => close(j)}
+                        className="btn-outline !py-2 !px-3 text-sm"
+                      >
+                        <CheckCircle2 size={14} /> Close
+                      </button>
+                    )}
+                    <button
+                      onClick={() => remove(j)}
+                      className="btn-outline !py-2 !px-3 text-sm !text-red-600 !border-red-200"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

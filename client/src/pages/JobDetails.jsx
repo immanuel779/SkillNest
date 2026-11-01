@@ -4,7 +4,7 @@ import {
   ArrowLeft,
   MapPin,
   Building2,
-  DollarSign,
+  Banknote,
   Clock,
   Bookmark,
   BookmarkCheck,
@@ -28,6 +28,7 @@ import { uploadDocument } from '../services/storageService'
 import ReportModal from '../components/ReportModal'
 import AICoverLetterAssist from '../components/ai/AICoverLetterAssist'
 import { friendlyError } from '../utils/errors'
+import { formatSalaryRange } from '../utils/currency'
 
 export default function JobDetails() {
   const { id } = useParams()
@@ -122,6 +123,11 @@ export default function JobDetails() {
 
   const isJobSeeker = profile?.role === 'job_seeker'
   const isOwner = user?.uid === job.ownerId
+  const salaryText = formatSalaryRange(
+    job.currency,
+    job.salaryMin,
+    job.salaryMax
+  )
 
   return (
     <div className="container-app py-10 max-w-4xl">
@@ -164,11 +170,9 @@ export default function JobDetails() {
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin size={14} /> {job.location || '—'}
                 </span>
-                {(job.salaryMin || job.salaryMax) && (
+                {salaryText && (
                   <span className="inline-flex items-center gap-1.5 font-semibold text-gray-800">
-                    <DollarSign size={14} /> {job.currency || 'USD'}{' '}
-                    {job.salaryMin?.toLocaleString?.() || '—'} –{' '}
-                    {job.salaryMax?.toLocaleString?.() || '—'}
+                    <Banknote size={14} /> {salaryText}
                   </span>
                 )}
                 {job.applicationDeadline && (
@@ -290,6 +294,7 @@ export default function JobDetails() {
               <Row label="Mode" value={job.workMode} />
               <Row label="Level" value={job.experienceLevel} />
               <Row label="Location" value={job.location || '—'} />
+              {salaryText && <Row label="Salary" value={salaryText} />}
               {job.category && <Row label="Category" value={job.category} />}
             </dl>
           </div>
@@ -456,7 +461,6 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Resume */}
           <div>
             <label className="label">Resume</label>
             {resumeUrl ? (
@@ -487,7 +491,6 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Extra attachments */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="label !mb-0">Extra files (optional)</label>
@@ -558,7 +561,6 @@ function ApplyModal({ job, user, profile, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Cover letter — with AI assist */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <label className="label !mb-0">Cover letter (optional)</label>

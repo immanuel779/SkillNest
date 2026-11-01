@@ -24,6 +24,7 @@ import CompanyShareMenu from '../components/company/CompanyShareMenu'
 import CompanyUpdateFeed from '../components/company/CompanyUpdateFeed'
 import CompanyReviews from '../components/CompanyReviews'
 import ReviewModal from '../components/ReviewModal'
+import { formatSalaryRange } from '../utils/currency'
 
 const TABS = [
   { v: 'about', l: 'About' },
@@ -147,7 +148,6 @@ export default function CompanySpace() {
     <div className="container-app py-8 max-w-5xl">
       {/* HERO */}
       <div className="card !p-0 overflow-hidden mb-6">
-        {/* Cover — clipped, sits BELOW the content layer */}
         <div className="relative h-40 sm:h-52 bg-gradient-to-br from-brand-600 to-brand-900 overflow-hidden">
           {company.coverUrl && (
             <>
@@ -156,16 +156,13 @@ export default function CompanySpace() {
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
               />
-              {/* Soft fade so logo always stands out */}
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
             </>
           )}
         </div>
 
-        {/* Content — pulled up over the cover, on top of it */}
         <div className="relative z-10 px-5 sm:px-8 pb-6 -mt-14 sm:-mt-20">
           <div className="flex flex-col sm:flex-row items-start gap-5">
-            {/* Logo — highest z-index so it sits above everything */}
             <div className="relative z-20 w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white ring-4 ring-white shadow-2xl flex items-center justify-center overflow-hidden shrink-0">
               {company.logoUrl ? (
                 <img
@@ -405,45 +402,50 @@ export default function CompanySpace() {
             </div>
           ) : (
             <div className="grid gap-4">
-              {jobs.map((j) => (
-                <Link
-                  key={j.id}
-                  to={`/jobs/${j.id}`}
-                  className="card card-hover block group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
-                          {j.title}
-                        </h3>
-                        <span className="badge bg-brand-50 text-brand-700 border border-brand-100">
-                          {j.jobType?.replace('_', ' ')}
-                        </span>
-                        <span className="badge bg-gray-100 text-gray-600">
-                          {j.workMode}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin size={12} /> {j.location || '—'}
-                        </span>
-                        <span>{j.experienceLevel} level</span>
-                        {(j.salaryMin || j.salaryMax) && (
-                          <span className="font-semibold text-gray-700">
-                            {j.currency || 'USD'}{' '}
-                            {j.salaryMin?.toLocaleString?.() || '—'} –{' '}
-                            {j.salaryMax?.toLocaleString?.() || '—'}
+              {jobs.map((j) => {
+                const salaryText = formatSalaryRange(
+                  j.currency,
+                  j.salaryMin,
+                  j.salaryMax
+                )
+                return (
+                  <Link
+                    key={j.id}
+                    to={`/jobs/${j.id}`}
+                    className="card card-hover block group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-700 transition-colors">
+                            {j.title}
+                          </h3>
+                          <span className="badge bg-brand-50 text-brand-700 border border-brand-100">
+                            {j.jobType?.replace('_', ' ')}
                           </span>
-                        )}
+                          <span className="badge bg-gray-100 text-gray-600">
+                            {j.workMode}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin size={12} /> {j.location || '—'}
+                          </span>
+                          <span>{j.experienceLevel} level</span>
+                          {salaryText && (
+                            <span className="font-semibold text-gray-700">
+                              {salaryText}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <span className="text-xs font-semibold text-brand-700 shrink-0">
+                        View →
+                      </span>
                     </div>
-                    <span className="text-xs font-semibold text-brand-700 shrink-0">
-                      View →
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
@@ -504,4 +506,5 @@ export default function CompanySpace() {
         />
       )}
     </div>
-  )}
+  )
+}

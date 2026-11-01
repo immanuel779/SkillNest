@@ -10,6 +10,7 @@ import {
   persistentMultipleTabManager,
   getFirestore,
 } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage' // <-- ADDED THIS
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -47,5 +48,9 @@ try {
   dbInstance = getFirestore(app)
 }
 
+// Initialize Firebase Storage
+const storageInstance = getStorage(app) // <-- ADDED THIS
+
 export const auth = authInstance
 export const db = dbInstance
+export const storage = storageInstance // <-- ADDED THIS (and fixed the typo)

@@ -104,15 +104,6 @@ export async function getCompany(companyId) {
 
 /**
  * Look up a company by slug.
- *
- * Tries several slug variations so URLs like:
- *   /c/codecraft
- *   /c/Codecraft
- *   /c/codecraft-technologies
- *   /c/codecrafttechnologies
- * all find the same company.
- *
- * Also falls back to treating the slug as a company doc ID.
  */
 export async function getCompanyBySlug(slug) {
   if (!slug) return null
@@ -192,11 +183,6 @@ export async function isFollowingCompany(companyId, userId) {
   return !!doc
 }
 
-/**
- * Follow a company. Idempotent:
- *  - if already following, does nothing
- *  - otherwise creates the follower doc and increments followerCount atomically
- */
 export async function followCompany(companyId, userId) {
   if (!companyId || !userId) throw new Error('Missing ids')
 
@@ -220,11 +206,6 @@ export async function followCompany(companyId, userId) {
   return { alreadyFollowing: false }
 }
 
-/**
- * Unfollow. Idempotent:
- *  - if not following, does nothing
- *  - otherwise deletes the follower doc and decrements followerCount
- */
 export async function unfollowCompany(companyId, userId) {
   if (!companyId || !userId) throw new Error('Missing ids')
 
@@ -244,10 +225,6 @@ export async function unfollowCompany(companyId, userId) {
   return { wasFollowing: true }
 }
 
-/**
- * Self-heal: count real follower docs and reconcile the stored followerCount.
- * Call this once from company page load if you suspect drift.
- */
 export async function syncFollowerCount(companyId) {
   if (!companyId) return 0
   const q = query(
@@ -345,4 +322,24 @@ export async function updateTeamRole(userId, role) {
     teamRole: role,
     updatedAt: serverTimestamp(),
   })
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+/**
+ * Helper to save (create or update) a company profile based on whether it already exists.
+ */
+export async function saveCompany(uid, data) {
+  if (!uid) throw new Error('User ID is required to save company profile')
+  
+  const existingCompany = await getMyCompany(uid)
+  
+  if (existingCompany) {
+    await updateCompany(existingCompany.id, data)
+    return existingCompany.id
+  } else {
+    return await createCompany(uid, data)
+  }
 }

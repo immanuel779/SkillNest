@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, X, Save, AlertCircle, ArrowLeft, Sparkles } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  Plus,
+  X,
+  Save,
+  AlertCircle,
+  ArrowLeft,
+  Sparkles,
+  ShieldCheck,
+  Lock,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyCompany } from '../services/companyService'
 import { createJob, updateJob, getJob } from '../services/jobService'
 import AIJobDescriptionWriter from '../components/ai/AIJobDescriptionWriter'
 import VerifyEmailBanner from '../components/VerifyEmailBanner'
+import { CURRENCIES, getCurrencySymbol } from '../utils/currency'
 
 const JOB_TYPES = [
   { v: 'full_time', l: 'Full-time' },
@@ -113,7 +123,7 @@ export default function EmployerPostJob() {
     location: '',
     salaryMin: '',
     salaryMax: '',
-    currency: 'USD',
+    currency: 'NGN',
     experienceLevel: 'mid',
     applicationDeadline: '',
     status: 'draft',
@@ -162,14 +172,6 @@ export default function EmployerPostJob() {
   const handleSave = async (publish = false) => {
     setError('')
 
-    // ── Email verification gate ──────────────────────────────
-    if (publish && !user?.emailVerified) {
-      setError(
-        'Please verify your email before publishing a job. Check your inbox for the verification link.'
-      )
-      return
-    }
-
     if (!form.title.trim()) {
       setError('Job title is required')
       return
@@ -180,6 +182,12 @@ export default function EmployerPostJob() {
     }
     if (!company) {
       setError('Please create your company profile first')
+      return
+    }
+
+    // ── VERIFICATION GATE ──
+    if (publish && !company.verified) {
+      setError('Your company must be verified before publishing a job. Please go to Dashboard and click "Get Verified".')
       return
     }
 
@@ -231,6 +239,8 @@ export default function EmployerPostJob() {
     )
   }
 
+  const symbol = getCurrencySymbol(form.currency)
+
   return (
     <div className="container-app py-10 pb-32 max-w-3xl">
       <button
@@ -241,6 +251,24 @@ export default function EmployerPostJob() {
       </button>
 
       <VerifyEmailBanner />
+
+      {/* VERIFICATION BANNER */}
+      {!company.verified && (
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-2xl p-5 shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+            <Lock size={20} className="text-yellow-600" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-base">Verification Required</p>
+            <p className="mt-1 text-yellow-700">
+              To protect job seekers, your company must be verified before you can publish a job. You can still save this job as a draft.
+            </p>
+          </div>
+          <Link to="/employer/verification" className="btn-primary !bg-yellow-500 hover:!bg-yellow-600 !text-white !border-transparent shrink-0 mt-3 sm:mt-0 w-full sm:w-auto text-center justify-center">
+            Get Verified Now
+          </Link>
+        </div>
+      )}
 
       <h1 className="text-3xl font-extrabold mb-1">
         {isEdit ? 'Edit Job' : 'Post a Job'}
@@ -335,37 +363,92 @@ export default function EmployerPostJob() {
       </Section>
 
       <Section title="Compensation">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Currency">
-            <select
-              className="input"
-              value={form.currency}
-              onChange={(e) => update('currency', e.target.value)}
-            >
-              {['USD', 'EUR', 'GBP', 'NGN'].map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+        <Field label="Currency">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {CURRENCIES.map((c) => {
+              const active = form.currency === c.code
+              return (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => update('currency', c.code)}
+                  className={`px-3 py-2.5 rounded-lg border-2 text-left transition ${
+                    active
+                      ? 'border-brand-500 bg-brand-50'
+                      : 'border-gray-200 hover:border-brand-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-lg font-bold ${
+                        active ? 'text-brand-700' : 'text-gray-700'
+                      }`}
+                    >
+                      {c.symbol}
+                    </span>
+                    <span
+                      className={`text-sm font-semibold ${
+                        active ? 'text-brand-800' : 'text-gray-700'
+                      }`}
+                    >
+                      {c.code}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    {c.label}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+
+        <div className="grid sm:grid-cols-2 gap-4 mt-4">
+          <Field label="Minimum salary">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm pointer-events-none">
+                {symbol}
+              </span>
+              <input
+                type="number"
+                className="input pl-8"
+                value={form.salaryMin || ''}
+                onChange={(e) => update('salaryMin', e.target.value)}
+                placeholder="500000"
+              />
+            </div>
           </Field>
-          <Field label="Salary min">
-            <input
-              type="number"
-              className="input"
-              value={form.salaryMin || ''}
-              onChange={(e) => update('salaryMin', e.target.value)}
-              placeholder="60000"
-            />
-          </Field>
-          <Field label="Salary max">
-            <input
-              type="number"
-              className="input"
-              value={form.salaryMax || ''}
-              onChange={(e) => update('salaryMax', e.target.value)}
-              placeholder="90000"
-            />
+          <Field label="Maximum salary">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm pointer-events-none">
+                {symbol}
+              </span>
+              <input
+                type="number"
+                className="input pl-8"
+                value={form.salaryMax || ''}
+                onChange={(e) => update('salaryMax', e.target.value)}
+                placeholder="800000"
+              />
+            </div>
           </Field>
         </div>
+
+        {(form.salaryMin || form.salaryMax) && (
+          <p className="text-xs text-gray-500 mt-3">
+            Preview:{' '}
+            <span className="font-semibold text-gray-700">
+              {symbol}
+              {form.salaryMin
+                ? Number(form.salaryMin).toLocaleString()
+                : '—'}{' '}
+              – {symbol}
+              {form.salaryMax
+                ? Number(form.salaryMax).toLocaleString()
+                : '—'}
+            </span>
+          </p>
+        )}
       </Section>
 
       <Section title="Description">
@@ -481,15 +564,12 @@ export default function EmployerPostJob() {
           </button>
           <button
             onClick={() => handleSave(true)}
-            disabled={saving || !user?.emailVerified}
-            className="btn-primary disabled:opacity-60"
-            title={
-              !user?.emailVerified
-                ? 'Verify your email to publish'
-                : 'Publish this job'
-            }
+            disabled={saving || !company.verified}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed group"
+            title={!company.verified ? "Verify your company to publish" : "Publish this job"}
           >
-            <Sparkles size={16} /> {saving ? 'Saving...' : 'Publish Job'}
+            {!company.verified ? <Lock size={16} /> : <Sparkles size={16} />}
+            {saving ? 'Saving...' : 'Publish Job'}
           </button>
         </div>
       </div>

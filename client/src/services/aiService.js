@@ -9,10 +9,6 @@ if (!API_KEY) {
 const MODEL = 'openai/gpt-oss-120b'
 const BASE_URL = 'https://api.groq.com/openai/v1'
 
-/**
- * Call Groq via its OpenAI-compatible chat completions endpoint.
- * Auth is sent as a standard Bearer token.
- */
 async function generate(prompt, options = {}) {
   if (!API_KEY) {
     throw new Error(
@@ -299,22 +295,27 @@ Return ONLY the improved bullet. No preamble.`
   return generate(prompt, { temperature: 0.7, maxOutputTokens: 120 })
 }
 
-/** Generate a full professional summary from the profile. */
-export async function generateSummaryFromProfile({ profile }) {
-  const exp = (profile?.experience || [])
+/** 
+ * UPDATED: Generate a full professional summary from the LIVE resume data, 
+ * prioritizing the headline they just typed.
+ */
+export async function generateSummaryFromProfile({ resume }) {
+  const b = resume?.basics || {}
+  const skills = (resume?.skills || []).map((s) => s.name).join(', ')
+  const exp = (resume?.experience || [])
+    .slice(0, 3)
     .map((x) => `${x.title || 'Role'} at ${x.company || 'Company'}`)
     .join('\n')
 
   const prompt = `Write a professional resume summary (3-4 sentences). Make it confident, specific, and ATS-friendly. Plain text, no markdown.
 
-CANDIDATE:
-- Headline: ${profile?.headline || 'Not provided'}
-- Skills: ${(profile?.skills || [])
-    .map((s) => (typeof s === 'string' ? s : s.name))
-    .join(', ') || 'Not listed'}
-- Experience:
+CANDIDATE LIVE DATA:
+- Target Headline: ${b.headline || 'Professional'}
+- Top Skills: ${skills || 'Not listed'}
+- Recent Experience:
 ${exp || 'Not provided'}
 
+Instructions: Focus heavily on the "Target Headline". Make the summary sound like it was written specifically for someone applying for a "${b.headline}" role.
 Return ONLY the summary. No preamble.`
 
   return generate(prompt, { temperature: 0.7, maxOutputTokens: 300 })

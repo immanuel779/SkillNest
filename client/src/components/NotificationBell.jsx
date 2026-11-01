@@ -35,30 +35,32 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return
 
-    const unsub = subscribeNotifications(user.uid, (list) => {
-      const prefs = profile || {}
-      const filtered = list.filter((n) => {
-        if (n.type?.startsWith('admin_')) return true
-        if (
-          n.type === 'application_status' &&
-          prefs.notifyApplications === false
-        )
-          return false
-        if (n.type === 'message' && prefs.notifyMessages === false) return false
-        if (n.type === 'interview' && prefs.notifyInterviews === false)
-          return false
-        if (
-          (n.type === 'new_job' ||
-            n.type === 'company_update' ||
-            n.type === 'platform_announcement') &&
-          prefs.notifyCompanyUpdates === false
-        )
-          return false
-        return true
+    let unsub = () => {}
+
+    try {
+      unsub = subscribeNotifications(user.uid, (list) => {
+        const prefs = profile || {}
+        const filtered = list.filter((n) => {
+          if (n.type?.startsWith('admin_')) return true
+          if (n.type === 'application_status' && prefs.notifyApplications === false) return false
+          if (n.type === 'message' && prefs.notifyMessages === false) return false
+          if (n.type === 'interview' && prefs.notifyInterviews === false) return false
+          if (
+            (n.type === 'new_job' || n.type === 'company_update' || n.type === 'platform_announcement') &&
+            prefs.notifyCompanyUpdates === false
+          ) return false
+          return true
+        })
+        setItems(filtered)
       })
-      setItems(filtered)
-    })
-    return unsub
+    } catch (err) {
+      // Prevents app crash if notificationService throws synchronously
+      console.warn('Notification subscription failed:', err.message)
+    }
+
+    return () => {
+      if (typeof unsub === 'function') unsub()
+    }
   }, [user, profile])
 
   useEffect(() => {
@@ -72,7 +74,6 @@ export default function NotificationBell() {
   const unread = items.filter((n) => !n.isRead).length
 
   const handleClick = (n) => {
-    // Mark read (best-effort) and open the detail modal
     if (!n.isRead) markNotificationRead(n.id).catch(() => {})
     setOpen(false)
     setActive(n)
@@ -128,16 +129,10 @@ export default function NotificationBell() {
                       !n.isRead ? 'bg-brand-50/40' : ''
                     }`}
                   >
-                    <div className="text-xl shrink-0">
-                      {ICONS[n.type] || '🔔'}
-                    </div>
+                    <div className="text-xl shrink-0">{ICONS[n.type] || '🔔'}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2">
-                        <p
-                          className={`text-sm ${
-                            !n.isRead ? 'font-bold' : 'font-medium'
-                          } text-gray-900`}
-                        >
+                        <p className={`text-sm ${!n.isRead ? 'font-bold' : 'font-medium'} text-gray-900`}>
                           {n.title}
                         </p>
                         {!n.isRead && (
@@ -145,15 +140,11 @@ export default function NotificationBell() {
                         )}
                       </div>
                       {n.body && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                          {n.body}
-                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>
                       )}
                       {n.createdAt?.seconds && (
                         <p className="text-[10px] text-gray-400 mt-1">
-                          {new Date(
-                            n.createdAt.seconds * 1000
-                          ).toLocaleString()}
+                          {new Date(n.createdAt.seconds * 1000).toLocaleString()}
                         </p>
                       )}
                     </div>
@@ -175,7 +166,6 @@ export default function NotificationBell() {
         )}
       </div>
 
-      {/* Detail modal — full text of the notification */}
       <NotificationDetailModal
         notification={active}
         onClose={() => setActive(null)}

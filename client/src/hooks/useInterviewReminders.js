@@ -22,7 +22,9 @@ export function useInterviewReminders() {
           if (iv.status !== 'scheduled') continue
           if (iv.reminderSent) continue
 
-          const t = iv.scheduledAt?.seconds ? iv.scheduledAt.seconds * 1000 : null
+          const t = iv.scheduledAt?.seconds
+            ? iv.scheduledAt.seconds * 1000
+            : null
           if (!t) continue
 
           const diff = t - now
@@ -41,8 +43,8 @@ export function useInterviewReminders() {
             }
           }
         }
-      } catch (err) {
-        console.warn('Interview reminder check failed:', err)
+      } catch {
+        /* silent — permission denied or empty */
       }
     })()
 
