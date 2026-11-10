@@ -8,14 +8,13 @@ import {
   LogOut,
   UserPlus,
   Info,
-  Users as UsersIcon,
   Loader2,
   Reply,
   Shield,
   Hash,
   Sparkles,
   MessageSquare,
-  Globe, // 👈 Added Globe icon
+  Globe,
 } from 'lucide-react'
 import {
   subscribeGroupMessages,
@@ -27,9 +26,6 @@ import { useToast } from '../../context/ToastContext'
 import GroupInfoModal from './GroupInfoModal'
 import AddMembersModal from './AddMembersModal'
 
-/* ============================================================
-   Trending tags — each one links to real job search results
-   ============================================================ */
 const TRENDING_TAGS = [
   { label: '#NGOJobs', to: '/jobs?q=NGO' },
   { label: '#RemoteWork', to: '/jobs?workMode=remote' },
@@ -70,21 +66,19 @@ export default function ForumChat({ group, user, profile, onBack }) {
   const inputRef = useRef(null)
 
   const isGeneral = group.id === 'general' || group.isGeneral
-  const isMember = (group.memberIds || []).includes(user.uid)
+  const isMember = (group.memberIds || []).includes(user?.uid)
 
   useEffect(() => {
     const unsub = subscribeGroupMessages(group.id, setMessages)
     return unsub
   }, [group.id])
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
 
-  // Top participants — most frequent senders
   const topParticipants = useMemo(() => {
     const map = {}
     messages.forEach((m) => {
@@ -107,6 +101,10 @@ export default function ForumChat({ group, user, profile, onBack }) {
   const handleSend = async (e) => {
     e?.preventDefault()
     if (!text.trim() || sending) return
+    if (!user?.uid) {
+      toast.error('Error', 'You must be logged in to chat.')
+      return
+    }
 
     const body = replyTo
       ? `↩ Replying to ${replyTo.senderName}:\n"${replyTo.body.slice(0, 80)}..."\n\n${text}`
@@ -190,7 +188,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
             </span>
           </div>
           
-          {/* 👇 UPDATED MEMBER COUNT LOGIC 👇 */}
           <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5 flex items-center gap-1">
             {isGeneral ? (
               <span className="flex items-center gap-1 text-[#7c3aed] font-semibold">
@@ -204,7 +201,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
           </p>
         </div>
 
-        {/* Avatar stack */}
         {topParticipants.length > 0 && (
           <div className="hidden sm:flex items-center -space-x-2 shrink-0">
             {topParticipants.map((p) => (
@@ -315,7 +311,7 @@ export default function ForumChat({ group, user, profile, onBack }) {
         )}
 
         {messages.map((m) => {
-          const mine = m.senderId === user.uid
+          const mine = m.senderId === user?.uid
           const isAdminMsg = m.senderName?.toLowerCase().includes('skillnest')
 
           return (
@@ -328,7 +324,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
               }`}
             >
               <div className="flex items-start gap-3">
-                {/* Avatar */}
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ${
                   isAdminMsg ? 'bg-gradient-to-br from-[#7c3aed] to-[#6d28d9]' : 'bg-gradient-to-br from-gray-400 to-gray-500'
                 }`}>
@@ -358,7 +353,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
                     {m.body}
                   </p>
 
-                  {/* Actions (Reveal on hover) */}
                   <div className="flex items-center gap-3 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <button
                       onClick={() => {
@@ -451,7 +445,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
         </div>
       )}
 
-      {/* Modals */}
       {showInfo && (
         <GroupInfoModal
           group={group}
