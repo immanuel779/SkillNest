@@ -44,7 +44,7 @@ function VIRTUAL_GENERAL() {
 }
 
 /* ============================================================
-   SUBSCRIBE TO GROUPS (Scalable: Only fetches user's groups)
+   SUBSCRIBE TO GROUPS (SCALABLE & INDEX-FREE)
    ============================================================ */
 export function subscribeMyGroups(uid, callback) {
   if (!uid) {
@@ -52,50 +52,63 @@ export function subscribeMyGroups(uid, callback) {
     return () => {}
   }
 
-  // 1. Query for groups the user is a member of
-  const q = query(
-    collection(db, 'communityGroups'),
-    where('memberIds', 'array-contains', uid),
-    orderBy('lastMessageAt', 'desc')
-  )
+  let generalData = VIRTUAL_GENERAL()
+  let privateGroups = []
 
-  const unsub = onSnapshot(
-    q,
-    (snap) => {
-      const groups = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  // Helper to merge and sort groups client-side (No Firestore Index needed!)
+  const updateCallback = () => {
+    const sortedPrivate = [...privateGroups].sort((a, b) => {
+      const ta = a.lastMessageAt?.seconds || 0
+      const tb = b.lastMessageAt?.seconds || 0
+      return tb - ta
+    })
+    callback([generalData, ...sortedPrivate])
+  }
 
-      // 2. Always add the general channel at the top
-      const hasGeneral = groups.some((g) => g.id === GENERAL_CHANNEL_ID)
-      
-      // Fetch general channel if it exists in DB
-      if (!hasGeneral) {
-        getDoc(doc(db, 'communityGroups', GENERAL_CHANNEL_ID)).then(gSnap => {
-          if (gSnap.exists()) {
-             const generalData = { id: gSnap.id, ...gSnap.data() }
-             callback([generalData, ...groups])
-          } else {
-             callback([VIRTUAL_GENERAL(), ...groups])
-          }
-        }).catch(() => {
-          callback([VIRTUAL_GENERAL(), ...groups])
-        })
-      } else {
-        // Sort general to top
-        groups.sort((a, b) => {
-          if (a.id === GENERAL_CHANNEL_ID) return -1
-          if (b.id === GENERAL_CHANNEL_ID) return 1
-          return 0
-        })
-        callback(groups)
+  // 1. Listen to the General Channel directly (It's public for everyone)
+  const unsubGeneral = onSnapshot(
+    doc(db, 'communityGroups', GENERAL_CHANNEL_ID),
+    (docSnap) => {
+      if (docSnap.exists()) {
+        generalData = { id: docSnap.id, ...docSnap.data() }
       }
+      updateCallback()
     },
     (error) => {
-      console.warn("Groups subscription error:", error)
-      callback([VIRTUAL_GENERAL()])
+      console.warn("General channel error:", error.message)
+      // Even if it fails, we still show the virtual fallback
+      updateCallback()
     }
   )
 
-  return unsub
+  // 2. Listen to Private Groups the user is actually a member of
+  // REMOVED orderBy to prevent "query requires an index" errors
+  const q = query(
+    collection(db, 'communityGroups'),
+    where('memberIds', 'array-contains', uid)
+  )
+
+  const unsubPrivate = onSnapshot(
+    q,
+    (snap) => {
+      // Filter out 'general' so we don't show it twice
+      privateGroups = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((g) => g.id !== GENERAL_CHANNEL_ID)
+      
+      updateCallback()
+    },
+    (error) => {
+      console.warn("Private groups subscription error:", error.message)
+      // If private groups fail, still show general
+      updateCallback()
+    }
+  )
+
+  return () => {
+    unsubGeneral()
+    unsubPrivate()
+  }
 }
 
 /* ============================================================
@@ -153,6 +166,7 @@ export async function ensureGeneralMembership(uid) {
     const snap = await getDoc(ref)
 
     if (!snap.exists()) {
+      // Initialize the general channel if it doesn't exist
       await setDoc(ref, {
         name: GENERAL_CHANNEL_NAME,
         description: GENERAL_CHANNEL_DESC,
@@ -183,7 +197,6 @@ export async function ensureGeneralMembership(uid) {
   }
 }
 
-// ─── NEW: ADD MEMBER ───
 export async function addGroupMember(groupId, userId) {
   if (!groupId || !userId) return
   try {
@@ -206,7 +219,6 @@ export async function addGroupMember(groupId, userId) {
   }
 }
 
-// ─── NEW: REMOVE MEMBER ───
 export async function removeGroupMember(groupId, userId) {
   if (!groupId || !userId) return
   try {
@@ -249,6 +261,8 @@ export function subscribeToTyping(groupId, callback) {
       // Filter out stale typing statuses (older than 5 seconds)
       .filter(u => u.updatedAt && (now - u.updatedAt.toMillis() < 5000))
     callback(typingUsers)
+  }, (error) => {
+    console.warn("Typing indicator error:", error.message)
   })
 }
 
@@ -302,7 +316,10 @@ export function subscribeMyInvites(uid, callback) {
   )
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-  }, () => callback([]))
+  }, (error) => {
+    console.warn("Invites subscription error:", error.message)
+    callback([])
+  })
 }
 
 export async function acceptGroupInvite(inviteId) {
@@ -312,7 +329,6 @@ export async function acceptGroupInvite(inviteId) {
 
   const data = snap.data()
   
-  // NOW THIS WILL WORK BECAUSE addGroupMember IS DEFINED ABOVE
   await addGroupMember(data.groupId, data.invitedUserId) 
   
   await updateDoc(ref, { status: 'accepted', respondedAt: serverTimestamp() })
@@ -332,7 +348,6 @@ export async function declineGroupInvite(inviteId) {
 export function subscribeGroupMessages(groupId, callback, max = 50) {
   if (!groupId) return () => {}
   
-  // Fetch the LATEST 50 messages
   const q = query(
     collection(db, 'groupMessages'),
     where('groupId', '==', groupId),
@@ -341,16 +356,14 @@ export function subscribeGroupMessages(groupId, callback, max = 50) {
   )
   
   return onSnapshot(q, (snap) => {
-    // Reverse because Firestore gives us newest first, but UI needs oldest at top
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse()
     callback(items)
   }, (error) => {
-    console.warn("Message subscription error:", error)
+    console.warn("Message subscription error:", error.message)
     callback([])
   })
 }
 
-// For loading older messages when scrolling up
 export async function loadMoreGroupMessages(groupId, lastVisibleDoc, max = 50) {
   if (!groupId || !lastVisibleDoc) return []
   const q = query(
@@ -378,7 +391,6 @@ export async function sendGroupMessage({ groupId, senderId, senderName, senderPh
     createdAt: serverTimestamp(),
   })
 
-  // Update group metadata for the sidebar
   await updateDoc(doc(db, 'communityGroups', groupId), {
     lastMessage: clean.slice(0, 100),
     lastMessageAt: serverTimestamp(),

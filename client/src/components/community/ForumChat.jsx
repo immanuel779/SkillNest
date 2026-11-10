@@ -15,6 +15,7 @@ import {
   Hash,
   Sparkles,
   MessageSquare,
+  Globe, // 👈 Added Globe icon
 } from 'lucide-react'
 import {
   subscribeGroupMessages,
@@ -188,8 +189,18 @@ export default function ForumChat({ group, user, profile, onBack }) {
               Live
             </span>
           </div>
-          <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5">
-            {group.memberCount || 0} members · {messages.length} posts
+          
+          {/* 👇 UPDATED MEMBER COUNT LOGIC 👇 */}
+          <p className="text-[11px] font-medium text-gray-500 truncate mt-0.5 flex items-center gap-1">
+            {isGeneral ? (
+              <span className="flex items-center gap-1 text-[#7c3aed] font-semibold">
+                <Globe size={12} /> Public Channel · Everyone
+              </span>
+            ) : (
+              `${group.memberCount || 0} members`
+            )}
+            <span className="text-gray-300">·</span> 
+            {messages.length} posts
           </p>
         </div>
 
@@ -209,7 +220,7 @@ export default function ForumChat({ group, user, profile, onBack }) {
                 )}
               </div>
             ))}
-            {group.memberCount > 4 && (
+            {!isGeneral && group.memberCount > 4 && (
               <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 text-gray-500 text-[10px] font-bold flex items-center justify-center shadow-sm">
                 +{group.memberCount - 4}
               </div>
