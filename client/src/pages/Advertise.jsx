@@ -10,6 +10,10 @@ import {
   Clock,
   AlertCircle,
   ArrowRight,
+  ShieldCheck,
+  Zap,
+  BarChart3,
+  Globe
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -21,6 +25,7 @@ import AdPackageCard from '../components/ads/AdPackageCard'
 import AdSubmissionForm from '../components/ads/AdSubmissionForm'
 import PaymentInstructionsModal from '../components/ads/PaymentInstructionsModal'
 
+// 👇 FIXED SYNTAX ERROR HERE 👇
 const STATUS_STYLES = {
   pending: {
     label: 'Pending review',
@@ -41,11 +46,11 @@ const STATUS_STYLES = {
     label: 'Expired',
     cls: 'bg-gray-100 text-gray-600 border-gray-200',
     icon: Clock,
-    awaiting_payment_confirmation: {
-  label: 'Payment confirming',
-  cls: 'bg-blue-50 text-blue-700 border-blue-200',
-  icon: Clock,
-},
+  },
+  awaiting_payment_confirmation: {
+    label: 'Payment confirming',
+    cls: 'bg-blue-50 text-blue-700 border-blue-200',
+    icon: Clock,
   },
 }
 
@@ -97,230 +102,272 @@ export default function Advertise() {
   }
 
   return (
-    <div className="container-app py-10 max-w-6xl">
-      {/* Hero */}
-      <div className="text-center max-w-3xl mx-auto mb-14">
-        <span className="badge bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-950 dark:text-brand-300 dark:border-brand-900">
-          <Megaphone size={12} /> Advertise with SkillNest
-        </span>
-        <h1 className="mt-5 text-4xl md:text-5xl lg:text-6xl font-extrabold text-balance">
-          Reach thousands of{' '}
-          <span className="gradient-text-brand">Nigerian job seekers</span>
-        </h1>
-        <p className="mt-5 text-lg text-gray-600 dark:text-gray-400">
-          Promote your brand, product, or service to a verified audience of
-          professionals, graduates, and employers across all 36 states.
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-14">
-        {[
-          { icon: Users, label: 'Monthly reach', value: '10k+' },
-          { icon: Target, label: 'Verified users', value: '100%' },
-          { icon: TrendingUp, label: 'Engagement rate', value: '12%' },
-          { icon: Megaphone, label: 'Ad formats', value: '4+ types' },
-        ].map((s) => (
-          <div key={s.label} className="card text-center">
-            <div className="w-10 h-10 mx-auto rounded-xl bg-brand-50 dark:bg-brand-950 flex items-center justify-center mb-3">
-              <s.icon size={18} className="text-brand-700 dark:text-brand-400" />
-            </div>
-            <p className="text-2xl font-extrabold">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Packages */}
-      <div className="text-center max-w-2xl mx-auto mb-10">
-        <span className="badge bg-accent-50 text-accent-700 border border-accent-100 dark:bg-accent-950 dark:text-accent-300 dark:border-accent-900">
-          <Sparkles size={12} /> Pricing
-        </span>
-        <h2 className="mt-4 text-3xl md:text-4xl font-extrabold">
-          Choose your plan
-        </h2>
-        <p className="mt-3 text-gray-600 dark:text-gray-400">
-          Simple, transparent pricing. No hidden fees.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="rounded-2xl border-2 border-gray-100 dark:border-gray-800 h-96 animate-pulse bg-gray-50 dark:bg-gray-900"
-            />
-          ))}
+    <div className="bg-gray-50/50 min-h-screen pb-20 font-sans">
+      
+      {/* ─── DARK HERO SECTION ─── */}
+      <div className="bg-[#0f172a] text-white pt-16 pb-32 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#7c3aed]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="container-app relative text-center max-w-3xl z-10">
+          <span className="inline-flex items-center gap-1.5 text-[#7c3aed] bg-[#7c3aed]/10 border border-[#7c3aed]/20 font-bold tracking-widest uppercase text-xs mb-5 px-4 py-1.5 rounded-full">
+            <Megaphone size={14} /> Advertise with SkillNest
+          </span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
+            Reach thousands of <br /> <span className="text-[#7c3aed]">Nigerian professionals</span>
+          </h1>
+          <p className="mt-5 text-gray-400 text-lg max-w-2xl mx-auto">
+            Promote your brand, product, or service directly to a verified audience of job seekers, graduates, and employers across all 36 states.
+          </p>
         </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-          {packages.map((pkg) => (
-            <AdPackageCard
-              key={pkg.id}
-              pkg={pkg}
-              selected={selected?.id === pkg.id}
-              onSelect={handleSelectPackage}
-            />
-          ))}
-        </div>
-      )}
+      </div>
 
-      {/* How it works */}
-      <div className="mb-14">
-        <h3 className="text-2xl font-bold text-center mb-8">
-          How it works
-        </h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="container-app max-w-6xl relative z-20 -mt-20">
+        
+        {/* ─── STATS BAR ─── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           {[
-            {
-              n: 1,
-              t: 'Choose your plan',
-              d: 'Pick the package that fits your budget and goals.',
-            },
-            {
-              n: 2,
-              t: 'Submit your ad',
-              d: 'Fill in your headline, logo, and CTA. Takes 3 minutes.',
-            },
-            {
-              n: 3,
-              t: 'We review it',
-              d: 'Our team approves within 24 hours. Payment on approval.',
-            },
-            {
-              n: 4,
-              t: 'Go live',
-              d: 'Your ad appears on the landing page and dashboards.',
-            },
-          ].map((step) => (
-            <div key={step.n} className="card">
-              <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 font-bold flex items-center justify-center mb-3">
-                {step.n}
+            { icon: Users, label: 'Monthly reach', value: '10k+' },
+            { icon: Target, label: 'Verified users', value: '100%' },
+            { icon: TrendingUp, label: 'Engagement rate', value: '12%' },
+            { icon: Megaphone, label: 'Ad formats', value: '4+ types' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm text-center">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-purple-50 flex items-center justify-center mb-3">
+                <s.icon size={20} className="text-[#7c3aed]" />
               </div>
-              <p className="font-bold">{step.t}</p>
-              <p className="text-sm text-gray-500 mt-1">{step.d}</p>
+              <p className="text-3xl font-extrabold text-gray-900">{s.value}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">{s.label}</p>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* My submissions */}
-      {user && submissions.length > 0 && (
-        <div className="mb-14">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">My ad submissions</h3>
-            <button
-              onClick={loadMySubmissions}
-              className="text-xs font-semibold text-brand-700 dark:text-brand-400 hover:underline"
-            >
-              Refresh
-            </button>
+        {/* ─── WHY ADVERTISE? (COMPETITIVE MATRIX) ─── */}
+        <div className="mb-20">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+              <Sparkles className="text-[#7c3aed]" /> Why Advertise on SkillNest?
+            </h2>
+            <p className="text-sm text-gray-500 mt-2">Get your brand in front of the right people at the right time.</p>
           </div>
-          <div className="grid gap-3">
-            {submissions.map((s) => {
-              const meta = STATUS_STYLES[s.status] || STATUS_STYLES.pending
-              const Icon = meta.icon
-              return (
-                <div key={s.id} className="card">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="w-full sm:w-32 h-24 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+                <Target className="text-blue-600" size={24} />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-2">Hyper-Targeted Audience</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">Reach active job seekers, fresh graduates, and hiring managers exactly when they are looking for solutions.</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4">
+                <ShieldCheck className="text-green-600" size={24} />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-2">100% Verified Users</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">No bots, no fake accounts. Every user on SkillNest is authenticated, ensuring your ad budget is spent on real humans.</p>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
+                <BarChart3 className="text-[#7c3aed]" size={24} />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-2">Real-Time Analytics</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">Track exactly how many views and clicks your ad gets. Know your ROI with our built-in dashboard analytics.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── PRICING PLANS ─── */}
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#7c3aed] uppercase tracking-widest bg-purple-50 border border-purple-100 px-3 py-1 rounded-full mb-3">
+            <Zap size={12} /> Pricing
+          </span>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">
+            Choose your visibility
+          </h2>
+          <p className="mt-3 text-gray-500">
+            Simple, transparent pricing. No hidden fees.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="rounded-2xl border-2 border-gray-100 h-96 animate-pulse bg-white" />
+            ))}
+          </div>
+        ) : packages.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 mb-16">
+            <Megaphone size={40} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-500 font-medium">No ad packages available right now.</p>
+            <p className="text-sm text-gray-400 mt-1">Please check back later or contact support.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-20">
+            {packages.map((pkg) => (
+              <div key={pkg.id} className="transition-transform duration-300 hover:-translate-y-2">
+                <AdPackageCard
+                  pkg={pkg}
+                  selected={selected?.id === pkg.id}
+                  onSelect={handleSelectPackage}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ─── HOW IT WORKS (TIMELINE) ─── */}
+        <div className="mb-20">
+          <div className="text-center mb-10">
+            <h3 className="text-2xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+              <Globe className="text-[#7c3aed]" /> How it works
+            </h3>
+            <p className="text-sm text-gray-500 mt-2">Get your ad live in less than 24 hours.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* Connecting Line */}
+            <div className="hidden lg:block absolute top-6 left-[12.5%] right-[12.5%] h-0.5 bg-gray-200 z-0" />
+            
+            {[
+              { n: 1, t: 'Choose your plan', d: 'Pick the package that fits your budget and visibility goals.' },
+              { n: 2, t: 'Submit your ad', d: 'Fill in your headline, logo, and CTA link. Takes 3 minutes.' },
+              { n: 3, t: 'We review it', d: 'Our team approves within 24 hours. Payment instructions sent.' },
+              { n: 4, t: 'Go live', d: 'Your ad appears on the landing page and dashboards instantly.' },
+            ].map((step) => (
+              <div key={step.n} className="relative z-10 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm text-center">
+                <div className="w-12 h-12 rounded-full bg-[#7c3aed] text-white font-extrabold text-lg flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-md">
+                  {step.n}
+                </div>
+                <p className="font-bold text-gray-900">{step.t}</p>
+                <p className="text-sm text-gray-500 mt-2 leading-relaxed">{step.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ─── MY SUBMISSIONS ─── */}
+        {user && submissions.length > 0 && (
+          <div className="mb-14 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+              <h3 className="text-lg font-extrabold text-gray-900">My Ad Campaigns</h3>
+              <button
+                onClick={loadMySubmissions}
+                className="text-xs font-bold text-[#7c3aed] hover:underline"
+              >
+                Refresh List
+              </button>
+            </div>
+            <div className="grid gap-4">
+              {submissions.map((s) => {
+                const meta = STATUS_STYLES[s.status] || STATUS_STYLES.pending
+                const Icon = meta.icon
+                return (
+                  <div key={s.id} className="border border-gray-100 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center gap-4 hover:bg-gray-50 transition">
+                    <div className="w-full md:w-32 h-24 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden border border-gray-200">
                       {s.logoUrl ? (
-                        <img
-                          src={s.logoUrl}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
+                        <img src={s.logoUrl} alt="" className="w-full h-full object-contain p-2" />
                       ) : (
                         <Megaphone size={28} className="text-gray-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h4 className="font-bold truncate">{s.headline}</h4>
-                        <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 border ${meta.cls}`}
-                        >
-                          <Icon size={10} /> {meta.label}
+                        <h4 className="font-bold text-gray-900 truncate text-base">{s.headline}</h4>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2.5 py-0.5 border ${meta.cls}`}>
+                          <Icon size={12} /> {meta.label}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {s.businessName} · {s.packageName} · ₦
-                        {Number(s.price || 0).toLocaleString()}
+                      <p className="text-sm text-gray-500 font-medium">
+                        {s.businessName} <span className="mx-1 text-gray-300">•</span> {s.packageName} <span className="mx-1 text-gray-300">•</span> ₦{Number(s.price || 0).toLocaleString()}
                       </p>
+                      
                       {s.status === 'rejected' && s.rejectionReason && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Reason: {s.rejectionReason}
+                        <p className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded border border-red-100">
+                          <strong>Reason:</strong> {s.rejectionReason}
                         </p>
                       )}
+                      
                       {s.status === 'approved' && (
-                        <p className="text-xs text-green-700 mt-1">
-                          {s.views || 0} views · {s.clicks || 0} clicks
-                        </p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-xs font-semibold text-green-700 flex items-center gap-1">
+                            <EyeIcon /> {s.views || 0} views
+                          </p>
+                          <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                            <CursorClickIcon /> {s.clicks || 0} clicks
+                          </p>
+                        </div>
                       )}
                     </div>
                     <a
                       href={s.ctaUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-outline !py-2 !px-3 text-xs shrink-0"
+                      className="btn-outline !py-2 !px-4 text-xs shrink-0 !border-gray-300 !text-gray-700 hover:!bg-gray-100"
                     >
-                      Preview <ArrowRight size={12} />
+                      Preview <ArrowRight size={14} />
                     </a>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ─── CTA FOR GUESTS ─── */}
+        {!user && (
+          <div className="bg-gradient-to-br from-[#0f172a] to-[#1a1c23] rounded-3xl p-10 text-center shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#7c3aed]/20 rounded-full blur-3xl" />
+            <Megaphone size={48} className="mx-auto text-[#7c3aed] mb-4" />
+            <h3 className="text-3xl font-extrabold text-white">Ready to advertise?</h3>
+            <p className="text-gray-400 mt-2 mb-8 max-w-md mx-auto">
+              Sign in or create an account to submit your ad and reach thousands of candidates.
+            </p>
+            <div className="flex justify-center gap-4 flex-wrap relative z-10">
+              <Link to="/register" className="btn-primary !bg-[#7c3aed] hover:!bg-[#6d28d9] !border-0 !py-3 !px-8 shadow-lg shadow-[#7c3aed]/20">
+                Create account <ArrowRight size={16} />
+              </Link>
+              <Link to="/login" className="btn-outline !border-white/20 !text-white hover:!bg-white/10 !py-3 !px-8">
+                Sign in
+              </Link>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Modals */}
+      {showForm && selected && (
+        <AdSubmissionForm
+          pkg={selected}
+          onClose={() => setShowForm(false)}
+          onSubmitted={(submissionId, pkg) => {
+            setShowForm(false)
+            setPaymentSubmission({ id: submissionId, pkg })
+            loadMySubmissions()
+          }}
+        />
       )}
 
-      {/* CTA for non-signed users */}
-      {!user && (
-        <div className="card text-center py-12 bg-gradient-to-br from-brand-50 to-accent-50/40 dark:from-brand-950/60 dark:to-gray-900 border-brand-100 dark:border-brand-900">
-          <Megaphone size={36} className="mx-auto text-brand-600 mb-3" />
-          <h3 className="text-2xl font-extrabold">Ready to advertise?</h3>
-          <p className="text-gray-600 dark:text-gray-400 mt-2 mb-6">
-            Sign in or create an account to submit your ad.
-          </p>
-          <div className="flex justify-center gap-3 flex-wrap">
-            <Link to="/register" className="btn-primary">
-              Create account <ArrowRight size={14} />
-            </Link>
-            <Link to="/login" className="btn-outline">
-              Sign in
-            </Link>
-          </div>
-        </div>
+      {paymentSubmission && (
+        <PaymentInstructionsModal
+          submissionId={paymentSubmission.id}
+          pkg={paymentSubmission.pkg}
+          onClose={() => {
+            setPaymentSubmission(null)
+            setSelected(null)
+          }}
+          onConfirmed={() => {
+            setPaymentSubmission(null)
+            setSelected(null)
+            loadMySubmissions()
+          }}
+        />
       )}
-
-    {showForm && selected && (
-  <AdSubmissionForm
-    pkg={selected}
-    onClose={() => setShowForm(false)}
-    onSubmitted={(submissionId, pkg) => {
-      setShowForm(false)
-      setPaymentSubmission({ id: submissionId, pkg })
-      loadMySubmissions()
-    }}
-  />
-)}
-
-{paymentSubmission && (
-  <PaymentInstructionsModal
-    submissionId={paymentSubmission.id}
-    pkg={paymentSubmission.pkg}
-    onClose={() => {
-      setPaymentSubmission(null)
-      setSelected(null)
-    }}
-    onConfirmed={() => {
-      setPaymentSubmission(null)
-      setSelected(null)
-      loadMySubmissions()
-    }}
-  />
-)}
     </div>
   )
+}
+
+// Small helper icons for the submissions tracker
+function EyeIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+}
+
+function CursorClickIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 9 5 12 1.774-5.226L21 14 9 9z"/><path d="m16.071 16.071 4.243 4.243"/><path d="m7.188 2.239.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656-2.12 2.122"/></svg>
 }
