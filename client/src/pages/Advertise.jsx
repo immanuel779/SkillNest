@@ -25,7 +25,6 @@ import AdPackageCard from '../components/ads/AdPackageCard'
 import AdSubmissionForm from '../components/ads/AdSubmissionForm'
 import PaymentInstructionsModal from '../components/ads/PaymentInstructionsModal'
 
-// 👇 FIXED SYNTAX ERROR HERE 👇
 const STATUS_STYLES = {
   pending: {
     label: 'Pending review',
@@ -63,9 +62,12 @@ export default function Advertise() {
   const [loading, setLoading] = useState(true)
   const [paymentSubmission, setPaymentSubmission] = useState(null)
 
+  // 👇 FIXED: Only Admin can trigger the database seed to prevent permission errors
   useEffect(() => {
-    seedAdPackages()
-  }, [])
+    if (profile?.role === 'admin') {
+      seedAdPackages()
+    }
+  }, [profile])
 
   useEffect(() => {
     let alive = true

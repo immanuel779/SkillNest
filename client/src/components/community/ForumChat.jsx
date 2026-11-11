@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 import {
   Send, ArrowLeft, MoreVertical, User, LogOut, UserPlus, Info,
   Loader2, Reply, Shield, Hash, Sparkles, MessageSquare, Globe,
-  Pencil, Trash2, Check, X, CornerDownRight
+  Pencil, Trash2, Check, X
 } from 'lucide-react'
 import {
   subscribeGroupMessages,
   sendGroupMessage,
   removeGroupMember,
   deleteGroupMessage,
-  editGroupMessage // 👈 Imported the new function
+  editGroupMessage
 } from '../../services/communityGroupService'
 import { useToast } from '../../context/ToastContext'
 import GroupInfoModal from './GroupInfoModal'
@@ -49,7 +49,7 @@ export default function ForumChat({ group, user, profile, onBack }) {
   const [showInfo, setShowInfo] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
 
-  // ─── NEW EDITING STATES ───
+  // Editing state
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
@@ -117,7 +117,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
     }
   }
 
-  // ─── HANDLE DELETE (WhatsApp style: vanishes for everyone instantly) ───
   const handleDelete = async (msg) => {
     if (!window.confirm('Delete this message? This will remove it for everyone.')) return
     try {
@@ -128,16 +127,12 @@ export default function ForumChat({ group, user, profile, onBack }) {
     }
   }
 
-  // ─── HANDLE START EDITING ───
   const startEditing = (msg) => {
     setEditingId(msg.id)
     setEditText(msg.body)
-    setTimeout(() => {
-      editInputRef.current?.focus()
-    }, 100)
+    setTimeout(() => editInputRef.current?.focus(), 100)
   }
 
-  // ─── HANDLE SAVE EDIT ───
   const handleSaveEdit = async (msgId) => {
     if (!editText.trim()) return
     setSavingEdit(true)
@@ -145,7 +140,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
       await editGroupMessage(msgId, editText)
       setEditingId(null)
       setEditText('')
-      toast.success('Message updated')
     } catch (err) {
       toast.error('Failed to edit', err.message)
     } finally {
@@ -169,7 +163,8 @@ export default function ForumChat({ group, user, profile, onBack }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-80px)] bg-[#f8fafc] relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+    // 👇 FIXED: Using h-[calc(100svh-130px)] for mobile to prevent the input box from being pushed off-screen 👇
+    <div className="flex flex-col h-[calc(100svh-130px)] md:h-[calc(100dvh-160px)] bg-[#f8fafc] relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
       
       {/* ─── HEADER ─── */}
       <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
@@ -281,8 +276,6 @@ export default function ForumChat({ group, user, profile, onBack }) {
                 isAdminMsg ? 'border-purple-100 bg-gradient-to-br from-purple-50/50 to-white shadow-sm shadow-[#7c3aed]/5' : 'border-gray-100 bg-white'
               }`}>
               <div className="flex items-start gap-3">
-                
-                {/* Avatar */}
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden shadow-sm ${
                   isAdminMsg ? 'bg-gradient-to-br from-[#7c3aed] to-[#6d28d9]' : 'bg-gradient-to-br from-gray-400 to-gray-500'
                 }`}>
@@ -298,14 +291,9 @@ export default function ForumChat({ group, user, profile, onBack }) {
                       </span>
                     )}
                     <span className="text-[10px] font-medium text-gray-400">{timeAgo(m.createdAt)}</span>
-                    
-                    {/* 👇 EDITED INDICATOR 👇 */}
-                    {m.isEdited && (
-                      <span className="text-[10px] font-medium text-gray-400 italic">(edited)</span>
-                    )}
+                    {m.isEdited && <span className="text-[10px] font-medium text-gray-400 italic">(edited)</span>}
                   </div>
 
-                  {/* 👇 CONDITIONAL RENDER: EDIT FORM VS DISPLAY TEXT 👇 */}
                   {isEditing ? (
                     <div className="mt-2 bg-gray-50 border border-[#7c3aed]/30 rounded-xl p-3 shadow-inner">
                       <textarea
@@ -316,50 +304,27 @@ export default function ForumChat({ group, user, profile, onBack }) {
                         rows={2}
                       />
                       <div className="flex items-center justify-end gap-2 mt-2">
-                        <button 
-                          onClick={() => setEditingId(null)} 
-                          className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200 rounded-lg transition"
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          onClick={() => handleSaveEdit(m.id)} 
-                          disabled={savingEdit || !editText.trim()}
-                          className="px-3 py-1.5 text-xs font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-lg transition disabled:opacity-50 flex items-center gap-1"
-                        >
+                        <button onClick={() => setEditingId(null)} className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-200 rounded-lg transition">Cancel</button>
+                        <button onClick={() => handleSaveEdit(m.id)} disabled={savingEdit || !editText.trim()} className="px-3 py-1.5 text-xs font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-lg transition disabled:opacity-50 flex items-center gap-1">
                           {savingEdit ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Save
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[13px] sm:text-sm text-gray-700 whitespace-pre-line leading-relaxed break-words">
-                      {m.body}
-                    </p>
+                    <p className="text-[13px] sm:text-sm text-gray-700 whitespace-pre-line leading-relaxed break-words">{m.body}</p>
                   )}
 
-                  {/* Actions */}
                   {!isEditing && (
                     <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <button
-                        onClick={() => { setReplyTo(m); inputRef.current?.focus() }}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-[#7c3aed] transition-colors bg-gray-50 hover:bg-purple-50 px-2 py-1 rounded-md"
-                      >
+                      <button onClick={() => { setReplyTo(m); inputRef.current?.focus() }} className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-[#7c3aed] transition-colors bg-gray-50 hover:bg-purple-50 px-2 py-1 rounded-md">
                         <Reply size={12} /> Reply
                       </button>
-                      
-                      {/* 👇 EDIT & DELETE ACTIONS (ONLY FOR SENDER) 👇 */}
                       {mine && (
                         <>
-                          <button
-                            onClick={() => startEditing(m)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-md"
-                          >
+                          <button onClick={() => startEditing(m)} className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-md">
                             <Pencil size={12} /> Edit
                           </button>
-                          <button
-                            onClick={() => handleDelete(m)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-red-600 transition-colors bg-gray-50 hover:bg-red-50 px-2 py-1 rounded-md"
-                          >
+                          <button onClick={() => handleDelete(m)} className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-500 hover:text-red-600 transition-colors bg-gray-50 hover:bg-red-50 px-2 py-1 rounded-md">
                             <Trash2 size={12} /> Delete
                           </button>
                         </>
@@ -375,7 +340,8 @@ export default function ForumChat({ group, user, profile, onBack }) {
 
       {/* ─── COMPOSER ─── */}
       {isMember || isGeneral ? (
-        <form onSubmit={handleSend} className="border-t border-gray-200 bg-white p-3 sm:p-4 shrink-0">
+        // 👇 FIXED: Added pb-safe to ensure it doesn't get hidden behind mobile navigation bars 👇
+        <form onSubmit={handleSend} className="border-t border-gray-200 bg-white p-3 sm:p-4 shrink-0 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           {replyTo && (
             <div className="flex items-start gap-3 mb-3 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex-1 min-w-0 rounded-xl bg-gray-50 border-l-4 border-[#7c3aed] px-3 py-2">
@@ -383,9 +349,7 @@ export default function ForumChat({ group, user, profile, onBack }) {
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#7c3aed]">
                     Replying to {replyTo.senderName}
                   </p>
-                  <button type="button" onClick={() => setReplyTo(null)} className="text-gray-400 hover:text-red-500 text-[10px] font-bold">
-                    Cancel
-                  </button>
+                  <button type="button" onClick={() => setReplyTo(null)} className="text-gray-400 hover:text-red-500 text-[10px] font-bold">Cancel</button>
                 </div>
                 <p className="text-xs text-gray-500 line-clamp-1 mt-0.5 italic">"{replyTo.body}"</p>
               </div>
