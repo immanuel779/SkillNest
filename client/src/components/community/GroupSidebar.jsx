@@ -1,4 +1,4 @@
-import { Hash, Users, Lock, Zap, Sparkles, ChevronRight } from 'lucide-react'
+import { Hash, Users, Lock, Sparkles, ChevronRight, Globe } from 'lucide-react'
 
 export default function GroupSidebar({ groups, activeId, onSelect }) {
   if (groups.length === 0) {
@@ -74,8 +74,6 @@ export default function GroupSidebar({ groups, activeId, onSelect }) {
                       <Lock size={10} className="text-gray-400 shrink-0" />
                     )}
                   </div>
-                  {/* Optional unread badge placeholder */}
-                  {/* <span className="w-2 h-2 rounded-full bg-[#7c3aed] shrink-0" /> */}
                 </div>
                 
                 <p className={`text-[11px] truncate mt-0.5 ${isActive ? 'text-[#7c3aed]/70 font-medium' : 'text-gray-500'}`}>
@@ -84,9 +82,16 @@ export default function GroupSidebar({ groups, activeId, onSelect }) {
                     : g.description || 'No messages yet'}
                 </p>
                 
-                <p className={`text-[10px] mt-0.5 font-medium ${isActive ? 'text-[#7c3aed]/60' : 'text-gray-400'}`}>
-                  {g.memberCount || 0} {g.memberCount === 1 ? 'member' : 'members'}
-                </p>
+                {/* 👇 UPDATED: Show "Public Channel" for general, otherwise show member count 👇 */}
+                {isGeneral ? (
+                  <p className={`text-[10px] mt-0.5 font-bold flex items-center gap-1 ${isActive ? 'text-[#7c3aed]' : 'text-gray-400'}`}>
+                    <Globe size={10} /> Public Channel
+                  </p>
+                ) : (
+                  <p className={`text-[10px] mt-0.5 font-medium ${isActive ? 'text-[#7c3aed]/60' : 'text-gray-400'}`}>
+                    {g.memberCount || 0} {g.memberCount === 1 ? 'member' : 'members'}
+                  </p>
+                )}
               </div>
 
               {/* Hover Arrow */}

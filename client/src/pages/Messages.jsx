@@ -524,7 +524,6 @@ export default function Messages() {
 
                     {showActions && (
                       <>
-                        {/* Backdrop to close on outside click */}
                         <div
                           className="fixed inset-0 z-20"
                           onClick={() => setShowActions(false)}
@@ -617,24 +616,55 @@ export default function Messages() {
                 )}
 
                 {/* MESSAGE LIST */}
-                <div className="flex-1 overflow-y-auto p-2.5 sm:p-3 md:p-4 space-y-2.5 sm:space-y-3 bg-gray-50/40">
+                <div className="flex-1 overflow-y-auto p-2.5 sm:p-3 md:p-4 space-y-2.5 sm:space-y-3 bg-[#f8fafc]">
                   {messages.length === 0 ? (
                     <div className="text-center text-gray-400 text-xs sm:text-sm mt-10 px-4">
                       No messages yet. Say hello 👋
                     </div>
                   ) : (
-                    messages.map((m) => (
-                      <MessageBubble
-                        key={m.id}
-                        message={m}
-                        mine={m.senderId === user.uid}
-                      />
-                    ))
+                    messages.map((m, index) => {
+                      // Date Divider Logic
+                      const currentMsgDate = m.createdAt?.seconds 
+                        ? new Date(m.createdAt.seconds * 1000).toDateString() 
+                        : null
+                      const prevMsgDate = index > 0 && messages[index - 1].createdAt?.seconds 
+                        ? new Date(messages[index - 1].createdAt.seconds * 1000).toDateString() 
+                        : null
+
+                      const showDateDivider = currentMsgDate && currentMsgDate !== prevMsgDate
+                      
+                      let dateLabel = ''
+                      if (showDateDivider) {
+                        const today = new Date().toDateString()
+                        const yesterday = new Date(Date.now() - 86400000).toDateString()
+                        if (currentMsgDate === today) dateLabel = 'Today'
+                        else if (currentMsgDate === yesterday) dateLabel = 'Yesterday'
+                        else dateLabel = new Date(currentMsgDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                      }
+
+                      return (
+                        <div key={m.id}>
+                          {/* Render the Date Divider if the day changed */}
+                          {showDateDivider && (
+                            <div className="flex items-center justify-center my-6">
+                              <span className="bg-gray-200/60 text-gray-500 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                                {dateLabel}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <MessageBubble
+                            message={m}
+                            mine={m.senderId === user.uid}
+                          />
+                        </div>
+                      )
+                    })
                   )}
 
                   {showTyping && (
                     <div className="flex justify-start">
-                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-1.5">
+                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-1.5 shadow-sm">
                         <span
                           className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gray-400 animate-bounce"
                           style={{ animationDelay: '0ms' }}

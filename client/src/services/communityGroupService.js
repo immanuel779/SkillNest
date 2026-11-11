@@ -287,3 +287,51 @@ export async function acceptGroupInvite(inviteId) {
 export async function declineGroupInvite(inviteId) {
   await updateDoc(doc(db, 'groupInvites', inviteId), { status: 'declined', respondedAt: serverTimestamp() })
 }
+
+import { arrayUnion } from 'firebase/firestore' // Make sure to add this to your imports at the top!
+
+// ... (keep all your existing code above this)
+
+/**
+ * ADMIN ONLY: Bulk adds ALL existing users to the general channel
+ */
+export async function syncAllUsersToGeneralChannel() {
+  try {
+    // 1. Fetch all users
+    const usersSnap = await getDocs(collection(db, 'users'))
+    const allUids = usersSnap.docs.map(d => d.id)
+    
+    if (allUids.length === 0) return { success: true, count: 0 }
+
+    // 2. Chunk them into groups of 500 (Firestore arrayUnion limits)
+    const CHUNK_SIZE = 500
+    const generalRef = doc(db, 'communityGroups', 'general')
+    
+    for (let i = 0; i < allUids.length; i += CHUNK_SIZE) {
+      const chunk = allUids.slice(i, i + CHUNK_SIZE)
+      
+      await updateDoc(generalRef, {
+        memberIds: arrayUnion(...chunk),
+        memberCount: increment(chunk.length)
+      })
+    }
+
+    return { success: true, count: allUids.length }
+  } catch (error) {
+    console.error("Failed to sync users:", error)
+    return { success: false, error: error.message }
+  }
+}
+export async function editGroupMessage(messageId, newBody) {
+  if (!messageId || !newBody?.trim()) return
+  try {
+    await updateDoc(doc(db, 'groupMessages', messageId), {
+      body: newBody.trim(),
+      isEdited: true,
+      updatedAt: serverTimestamp()
+    })
+  } catch (err) {
+    console.error("Failed to edit message:", err)
+    throw err
+  }
+}

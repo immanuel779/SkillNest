@@ -5,14 +5,17 @@ import {
   X,
   Crown,
   Zap,
-  ShieldCheck,
   Users,
   Search,
   FileText,
   ChevronDown,
   Building2,
-  Lock,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck,
+  Star,
+  HelpCircle,
+  TrendingUp,
+  Lock
 } from 'lucide-react'
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../config/firebase'
@@ -24,22 +27,21 @@ const PAYSTACK_PUBLIC_KEY = 'pk_live_279c98242a3ed48cf4a5e266005fe76d53db0ecb'
 
 const BILLING_CYCLES = [
   { id: 'monthly', label: 'Monthly', months: 1, discount: 0 },
-  { id: 'quarterly', label: 'Quarterly', months: 3, discount: 0.1, badge: 'Save 1 month' },
-  { id: 'biannual', label: '6 Months', months: 6, discount: 0.15, badge: '1 mo free' },
-  { id: 'yearly', label: 'Yearly', months: 12, discount: 0.2, badge: '2 mo free', best: true },
+  { id: 'quarterly', label: 'Quarterly', months: 3, discount: 0.1, badge: 'Save 10%' },
+  { id: 'biannual', label: '6 Months', months: 6, discount: 0.15, badge: 'Save 15%' },
+  { id: 'yearly', label: 'Yearly', months: 12, discount: 0.2, badge: 'Best Offer', best: true },
 ]
 
 const PLANS = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Free Tier',
     priceMonthly: 0,
-    desc: 'Post jobs and receive applications at no cost.',
+    desc: 'Limited access to test the platform. Upgrade to actually hire.',
     features: [
       { text: 'Post up to 1 active job', included: true },
       { text: 'Receive & manage applications', included: true },
       { text: 'View up to 10 applications per job', included: true },
-      { text: 'Browse & shortlist candidates', included: true },
       { text: '1 phone-number reveal / 24h', included: true },
       { text: 'Resume access after shortlisting', included: true },
       { text: 'Company profile & verification', included: true },
@@ -52,15 +54,12 @@ const PLANS = [
     id: 'standard',
     name: 'Standard',
     priceMonthly: 9999,
-    desc: 'Start hiring with room to grow.',
+    desc: 'Perfect for small businesses making their first few hires.',
     features: [
       { text: 'Up to 3 active job posts', included: true },
       { text: 'View up to 10 applications per job', included: true },
       { text: 'Up to 10 CV downloads per job', included: true },
       { text: 'Receive & manage applications', included: true },
-      { text: 'Browse & shortlist candidates', included: true },
-      { text: 'Resume access after shortlisting', included: true },
-      { text: 'Company profile & verification', included: true },
       { text: '3 contact reveals / day', included: true },
       { text: 'Email support (48h)', included: true },
       { text: 'Instant resume access', included: false },
@@ -70,15 +69,11 @@ const PLANS = [
     id: 'professional',
     name: 'Professional',
     priceMonthly: 17999,
-    desc: 'More posts and CV access for active hiring.',
+    desc: 'For active hiring managers who need more volume.',
     features: [
       { text: 'Up to 6 active job posts', included: true },
       { text: 'View up to 10 applications per job', included: true },
       { text: 'Up to 10 CV downloads per job', included: true },
-      { text: 'Receive & manage applications', included: true },
-      { text: 'Browse & shortlist candidates', included: true },
-      { text: 'Resume access after shortlisting', included: true },
-      { text: 'Company profile & verification', included: true },
       { text: '5 contact reveals / day', included: true },
       { text: 'Priority email support (24h)', included: true },
       { text: 'Instant resume access', included: false },
@@ -88,14 +83,12 @@ const PLANS = [
     id: 'premium',
     name: 'Premium',
     priceMonthly: 29999,
-    desc: 'Urgent posts, instant resume access, 10 contact reveals a day.',
-    badge: 'Best Value',
+    desc: 'Urgent posts, AI matching, and instant resume access.',
+    badge: 'Most Popular',
     features: [
       { text: 'Up to 12 active job posts', included: true },
       { text: 'Unlimited application views', included: true },
       { text: 'Up to 10 CV downloads per job', included: true },
-      { text: 'Receive & manage applications', included: true },
-      { text: 'Browse & shortlist candidates', included: true },
       { text: 'Instant resume access', included: true },
       { text: '10 contact reveals / day', included: true },
       { text: 'Daily talent alerts with AI', included: true },
@@ -106,29 +99,45 @@ const PLANS = [
     id: 'enterprise',
     name: 'Enterprise',
     priceMonthly: 49999,
-    desc: 'Zero limits. Every application in your inbox.',
+    desc: 'Zero limits. Every application, CV, and contact in your inbox.',
     badge: 'Unlimited',
     features: [
       { text: 'Unlimited active job posts', included: true },
       { text: 'Unlimited application views', included: true },
       { text: 'Unlimited CV downloads', included: true },
-      { text: 'Company profile & verification', included: true },
       { text: 'Instant resume access', included: true },
       { text: 'Unlimited contact reveals', included: true },
       { text: 'Dedicated account support', included: true },
       { text: 'Early access to new features', included: true },
-      { text: 'Shortlist/reject via email', included: true },
     ]
   }
 ]
 
 const FAQS = [
-  { q: 'Is there a free trial?', a: 'Yes, our Free plan is forever free and allows you to post 1 active job and receive applications.' },
-  { q: 'How does billing work?', a: 'You are billed upfront based on the cycle you choose. Your plan will automatically renew unless cancelled.' },
-  { q: 'What payment methods do you accept?', a: 'We accept all major debit/credit cards, bank transfers, and USSD via Paystack.' },
-  { q: 'How do contact reveals work?', a: 'Contact reveals let you see the email and phone number of a candidate. Once revealed, it is permanently unlocked for your team.' },
-  { q: 'What is AI Match Scoring?', a: 'Our AI analyzes your job description against candidate profiles to give you a 0-100% match score, saving you hours of screening.' },
-  { q: 'Can I switch plans?', a: 'Yes, you can upgrade or downgrade at any time from your dashboard.' },
+  { 
+    q: 'Is the Free plan really free forever?', 
+    a: 'No. The Free tier is designed for you to test the platform. It limits you to 1 active job and restricts CV downloads. Only the SkillNest Admin and the official SkillNest Company account have unrestricted, forever-free access to the entire platform. Employers must upgrade to a paid plan to unlock full hiring capabilities.' 
+  },
+  { 
+    q: 'Why should I upgrade from the Free tier?', 
+    a: 'Top candidates get hired in days. On the Free tier, you can only post 1 job and view 10 applications. Upgrading to Premium or Enterprise allows you to post more jobs, download CVs instantly, and reveal contact details so you can reach out to candidates before your competitors do.' 
+  },
+  { 
+    q: 'How does billing work?', 
+    a: 'You are billed upfront based on the cycle you choose (Monthly, Quarterly, etc.). Your plan will automatically renew unless cancelled. You can cancel anytime from your dashboard with no hidden fees.' 
+  },
+  { 
+    q: 'What payment methods do you accept?', 
+    a: 'We accept all major debit/credit cards, bank transfers, and USSD via Paystack. Your payment information is securely processed by Paystack; we do not store your card details.' 
+  },
+  { 
+    q: 'How do contact reveals work?', 
+    a: 'Contact reveals let you see the email and phone number of a candidate. Once revealed, it is permanently unlocked for your team. Standard gets 3/day, Premium gets 10/day, and Enterprise gets unlimited.' 
+  },
+  { 
+    q: 'What is AI Match Scoring?', 
+    a: 'Our AI analyzes your job description against candidate profiles to give you a 0-100% match score. This feature is exclusive to Enterprise users and saves you hours of manual screening.' 
+  },
 ]
 
 export default function EmployerUpgrade() {
@@ -161,7 +170,6 @@ export default function EmployerUpgrade() {
     return Math.round(total - discount)
   }
 
-  // Helper function to process database updates safely
   const processSuccessfulPayment = async (response, plan, currentCycle) => {
     try {
       const expiresAt = new Date()
@@ -178,7 +186,7 @@ export default function EmployerUpgrade() {
       })
 
       toast.success('Payment Successful!', `You are now on the ${plan.name} plan.`)
-      navigate('/dashboard/employer')
+      navigate('/employer/dashboard')
     } catch (err) {
       toast.error('Database update failed', err.message)
     } finally {
@@ -204,7 +212,6 @@ export default function EmployerUpgrade() {
           { display_name: "Cycle", variable_name: "cycle", value: cycle }
         ]
       },
-      // 🚨 FIXED: Using standard function syntax
       callback: function(response) {
         processSuccessfulPayment(response, plan, cycle)
       },
@@ -223,19 +230,18 @@ export default function EmployerUpgrade() {
       <div className="bg-[#0f172a] text-white pt-16 pb-32 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         <div className="container-app relative text-center max-w-3xl z-10">
-          <span className="text-brand-400 font-bold tracking-widest uppercase text-xs mb-3 block">• Transparent Pricing •</span>
+          <span className="text-brand-400 font-bold tracking-widest uppercase text-xs mb-3 block">• Competitive Pricing •</span>
           <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight">
-            Plans built for <br /> <span className="text-brand-400">Nigerian hiring</span>
+            Stop losing top talent to <br /> <span className="text-brand-400">slow hiring</span>
           </h1>
           <p className="mt-4 text-gray-400 text-lg">
-            Start free. Upgrade when you're ready. No lock-ins — cancel anytime.
+            Upgrade to unlock unlimited job posts, instant CV downloads, and direct contact reveals. 
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 mt-8 text-xs font-semibold text-gray-300">
-             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-400"/> Free to start</span>
-             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-400"/> No setup fees</span>
-             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-400"/> Cancel anytime</span>
-             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-400"/> Pay in Naira</span>
+          <div className="flex flex-wrap justify-center gap-3 mt-8 text-xs font-semibold text-gray-300">
+             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><ShieldCheck size={14} className="text-green-400"/> Secure Paystack Checkout</span>
+             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><Zap size={14} className="text-yellow-400"/> Instant Activation</span>
+             <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full"><Lock size={14} className="text-blue-400"/> Cancel Anytime</span>
           </div>
         </div>
       </div>
@@ -265,56 +271,35 @@ export default function EmployerUpgrade() {
           </div>
         </div>
 
-        {/* FEATURE HIGHLIGHTS BAR */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-2xl p-4 flex items-start gap-3 shadow-sm border border-gray-100">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"><Zap size={18} className="text-blue-600"/></div>
-            <div>
-              <p className="font-bold text-sm text-gray-900">AI Match Scoring</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">Enterprise employers get 0-100% match scores on candidates.</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 flex items-start gap-3 shadow-sm border border-gray-100">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center shrink-0"><Search size={18} className="text-green-600"/></div>
-            <div>
-              <p className="font-bold text-sm text-gray-900">Unlimited Contact Reveals</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">Enterprise sees phone + email directly with no pipeline step.</p>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 flex items-start gap-3 shadow-sm border border-gray-100">
-            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0"><FileText size={18} className="text-orange-600"/></div>
-            <div>
-              <p className="font-bold text-sm text-gray-900">Instant Resume Access</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">View CVs the moment you open a profile (Premium+).</p>
-            </div>
-          </div>
-        </div>
-
         {/* PRICING CARDS GRID */}
         <div className="grid lg:grid-cols-5 md:grid-cols-3 gap-4 items-start">
           {PLANS.map(plan => {
-            const activeCycle = BILLING_CYCLES.find(c => c.id === cycle)
             const price = plan.priceMonthly === 0 ? 0 : calculatePrice(plan.priceMonthly)
             const isPremium = plan.id === 'premium'
             const isEnterprise = plan.id === 'enterprise'
+            const isFree = plan.id === 'free'
 
             return (
               <div 
                 key={plan.id} 
-                className={`relative bg-white rounded-2xl border flex flex-col h-full transition hover:shadow-xl
-                  ${isPremium ? 'border-brand-500 shadow-lg ring-1 ring-brand-500' : 'border-gray-200 shadow-sm'}
+                className={`relative bg-white rounded-2xl border flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl
+                  ${isPremium ? 'border-brand-500 shadow-lg ring-2 ring-brand-500 scale-105 z-10' : 'border-gray-200 shadow-sm'}
                   ${isEnterprise ? 'border-blue-600 shadow-lg ring-1 ring-blue-600' : ''}
+                  ${isFree ? 'opacity-80 hover:opacity-100' : ''}
                 `}
               >
-                {isPremium && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Best Value</div>}
-                {isEnterprise && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">Unlimited</div>}
+                {isPremium && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-md">Most Popular</div>}
+                {isEnterprise && <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-md">Unlimited</div>}
                 
                 <div className="p-5 border-b border-gray-100 flex-1">
-                  <h3 className="font-bold text-lg text-gray-900">{plan.name}</h3>
+                  <h3 className="font-bold text-lg text-gray-900 flex items-center justify-between">
+                    {plan.name}
+                    {isFree && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded">LIMITED</span>}
+                  </h3>
                   
                   <div className="mt-3 flex items-baseline gap-1">
                     {price === 0 ? (
-                      <span className="text-4xl font-extrabold text-gray-900">Free</span>
+                      <span className="text-4xl font-extrabold text-gray-900">₦0</span>
                     ) : (
                       <>
                         <span className="text-sm font-bold text-gray-500">₦</span>
@@ -324,40 +309,40 @@ export default function EmployerUpgrade() {
                     )}
                   </div>
                   
-                  <p className="mt-2 text-xs text-gray-500 leading-relaxed min-h-[32px]">{plan.desc}</p>
+                  <p className="mt-2 text-xs text-gray-500 leading-relaxed min-h-[40px]">{plan.desc}</p>
 
                   <ul className="mt-5 space-y-2.5">
                     {plan.features.map((f, i) => (
                       <li key={i} className="flex items-start gap-2">
                         {f.included ? (
-                          <Check size={14} className="text-green-500 shrink-0 mt-0.5" />
+                          <Check size={14} className={`shrink-0 mt-0.5 ${isPremium || isEnterprise ? 'text-brand-500' : 'text-green-500'}`} />
                         ) : (
                           <X size={14} className="text-gray-300 shrink-0 mt-0.5" />
                         )}
-                        <span className={`text-[11px] leading-tight ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>{f.text}</span>
+                        <span className={`text-[11px] leading-tight ${f.included ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>{f.text}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-b-2xl">
-                  {plan.id === 'free' ? (
+                  {isFree ? (
                      <button disabled className="w-full py-2.5 rounded-lg text-sm font-bold bg-gray-200 text-gray-500 cursor-not-allowed flex items-center justify-center gap-1.5">
-                       <Check size={14}/> Current Plan
+                       Current Plan
                      </button>
                   ) : (
                     <button 
                       onClick={() => handleSubscribe(plan)}
                       disabled={payingId === plan.id}
-                      className={`w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 transition ${
+                      className={`w-full py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 transition active:scale-95 ${
                         isEnterprise ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md' :
-                        isPremium ? 'bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-md hover:shadow-lg' :
+                        isPremium ? 'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-md hover:shadow-lg' :
                         'bg-gray-900 text-white hover:bg-black'
                       }`}
                     >
                       {payingId === plan.id ? 'Processing...' : (
                         <>
-                          <Crown size={14}/> Get {plan.name} — ₦{price.toLocaleString()}
+                          <Crown size={14}/> Select {plan.name}
                         </>
                       )}
                     </button>
@@ -368,35 +353,55 @@ export default function EmployerUpgrade() {
           })}
         </div>
 
-        {/* HIRING AT SCALE */}
-        <div className="mt-8 bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-          <div>
-            <h3 className="font-bold text-gray-900 flex items-center gap-2"><Building2 size={18} className="text-brand-600"/> Hiring at scale?</h3>
-            <p className="text-xs text-gray-500 mt-1">Agencies and large teams: talk to us about custom volume hiring.</p>
+        {/* WHY UPGRADE MATRIX */}
+        <div className="mt-12 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+              <TrendingUp className="text-brand-600" /> Why Employers Upgrade
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">The cost of missing a top candidate is far higher than a subscription.</p>
           </div>
-          <a href="mailto:opeyemioluwadamilare415@gmail.com" className="btn-outline !py-2.5 !px-6 text-sm !bg-gray-900 !text-white !border-gray-900 hover:!bg-black shrink-0">
-            Contact Sales
-          </a>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3"><Zap size={20} className="text-green-600"/></div>
+              <h4 className="font-bold text-gray-900 text-sm">Speed to Hire</h4>
+              <p className="text-xs text-gray-600 mt-1">Free users wait for candidates to apply. Premium users download CVs and reveal contact info instantly, beating other companies to the punch.</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3"><Users size={20} className="text-blue-600"/></div>
+              <h4 className="font-bold text-gray-900 text-sm">Volume Hiring</h4>
+              <p className="text-xs text-gray-600 mt-1">If you have more than 1 role to fill, the Free tier will block you. Standard and Professional plans allow you to run multiple pipelines at once.</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3"><Search size={20} className="text-purple-600"/></div>
+              <h4 className="font-bold text-gray-900 text-sm">AI Candidate Matching</h4>
+              <p className="text-xs text-gray-600 mt-1">Stop reading 100s of unqualified CVs. Enterprise AI scoring ranks your applicants from 0-100% so you only interview the best.</p>
+            </div>
+          </div>
         </div>
 
-        {/* FAQ SECTION */}
-        <div className="mt-20 max-w-3xl mx-auto">
+        {/* FAQ SECTION (UPGRADED) */}
+        <div className="mt-20 max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-extrabold text-gray-900">Common Questions</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900 flex items-center justify-center gap-2">
+               <HelpCircle className="text-brand-600" /> Frequently Asked Questions
+            </h2>
             <p className="text-sm text-gray-500 mt-1">Everything you need to know before subscribing.</p>
           </div>
-          <div className="space-y-3">
+          <div className="grid md:grid-cols-2 gap-4">
             {FAQS.map((faq, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div key={i} className={`bg-white border rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${openFaq === i ? 'border-brand-300 ring-1 ring-brand-100' : 'border-gray-200'}`}>
                 <button 
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full text-left px-5 py-4 flex items-center justify-between font-bold text-gray-800 text-sm hover:bg-gray-50 transition"
+                  className="w-full text-left px-5 py-4 flex items-center justify-between font-bold text-gray-800 text-sm hover:bg-gray-50 transition gap-4"
                 >
-                  {faq.q}
-                  <ChevronDown size={16} className={`text-gray-400 transition-transform ${openFaq === i ? 'rotate-180' : ''}`} />
+                  <span className="flex-1">{faq.q}</span>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${openFaq === i ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400'}`}>
+                    <ChevronDown size={14} className={`transition-transform duration-200 ${openFaq === i ? 'rotate-180' : ''}`} />
+                  </div>
                 </button>
                 {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-3">
+                  <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-4 bg-gray-50/50">
                     {faq.a}
                   </div>
                 )}
@@ -411,15 +416,15 @@ export default function EmployerUpgrade() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-50">
         <div className="container-app max-w-7xl py-3 flex items-center justify-between gap-4">
           <div className="hidden sm:block">
-            <p className="font-bold text-gray-900 text-sm">No contracts. Cancel anytime.</p>
-            <p className="text-xs text-gray-500 mt-0.5">Your free account and data are always yours.</p>
+            <p className="font-bold text-gray-900 text-sm">Ready to hire faster?</p>
+            <p className="text-xs text-gray-500 mt-0.5">Join thousands of Nigerian employers finding top talent.</p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
-             <button onClick={() => handleSubscribe(PLANS[3])} className="flex-1 sm:flex-none btn-primary !bg-brand-600 !py-2 !px-5 text-sm shadow-md">
-                <Crown size={14}/> Get Premium — ₦29,999 /mo
+             <button onClick={() => handleSubscribe(PLANS[3])} className="flex-1 sm:flex-none btn-primary !bg-brand-600 !py-2.5 !px-6 text-sm shadow-md hover:!bg-brand-700 transition active:scale-95">
+                <Crown size={16}/> Get Premium — ₦29,999 /mo
              </button>
-             <Link to="/dashboard/employer" className="flex-1 sm:flex-none btn-outline !py-2 !px-4 text-sm !bg-gray-50 text-center">
-                <ArrowRight size={14} className="inline mr-1"/> Dashboard
+             <Link to="/employer/dashboard" className="flex-1 sm:flex-none btn-outline !py-2.5 !px-4 text-sm !bg-gray-50 text-center hover:!bg-gray-100">
+                Dashboard
              </Link>
           </div>
         </div>

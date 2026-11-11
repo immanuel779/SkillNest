@@ -1,4 +1,4 @@
-import { X, LogOut, UserPlus, Users, Shield, Sparkles, MessageSquare } from 'lucide-react'
+import { X, LogOut, UserPlus, Users, Shield, Sparkles, MessageSquare, Globe } from 'lucide-react'
 
 export default function GroupInfoModal({ group, user, onClose, onLeave, onAddMembers }) {
   const isGeneral = group.id === 'general' || group.isGeneral
@@ -56,11 +56,18 @@ export default function GroupInfoModal({ group, user, onClose, onLeave, onAddMem
             <p className="text-sm text-gray-400 italic mt-2">No description provided.</p>
           )}
           
-          <div className="flex items-center gap-2 mt-4">
-            <p className="text-xs font-bold text-gray-600 bg-gray-100 rounded-full px-3 py-1 inline-flex items-center gap-1.5">
-              <Users size={12} className="text-gray-500" />
-              {group.memberCount || 0} {group.memberCount === 1 ? 'Member' : 'Members'}
-            </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+            {/* 👇 FIXED: Show "Public Channel" for general, otherwise show member count 👇 */}
+            {isGeneral ? (
+              <p className="text-xs font-bold text-[#7c3aed] bg-purple-50 border border-purple-100 rounded-full px-3 py-1 inline-flex items-center gap-1.5 shadow-sm">
+                <Globe size={12} /> Public Channel · Everyone
+              </p>
+            ) : (
+              <p className="text-xs font-bold text-gray-600 bg-gray-100 rounded-full px-3 py-1 inline-flex items-center gap-1.5">
+                <Users size={12} className="text-gray-500" />
+                {group.memberCount || 0} {group.memberCount === 1 ? 'Member' : 'Members'}
+              </p>
+            )}
 
             {isOwner && !isGeneral && (
               <p className="text-xs font-bold text-[#7c3aed] bg-purple-50 border border-purple-100 rounded-full px-3 py-1 inline-flex items-center gap-1.5">

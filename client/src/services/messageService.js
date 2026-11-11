@@ -5,6 +5,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc, // 👈 ADDED FOR DELETE FUNCTIONALITY
   getDocs,
   query,
   where,
@@ -213,6 +214,42 @@ export async function sendMessage({
   return ref.id
 }
 
+/* ============================================================
+   NEW: EDIT & DELETE MESSAGES
+   ============================================================ */
+
+export async function editMessage(messageId, newBody) {
+  if (!messageId || !newBody?.trim()) return
+  const clean = newBody.trim().slice(0, 5000)
+  
+  try {
+    await updateDoc(doc(db, 'messages', messageId), {
+      body: clean,
+      isEdited: true,
+      updatedAt: serverTimestamp(),
+    })
+  } catch (err) {
+    console.error('Failed to edit message:', err)
+    throw err
+  }
+}
+
+export async function deleteMessage(messageId) {
+  if (!messageId) return
+  
+  try {
+    await deleteDoc(doc(db, 'messages', messageId))
+  } catch (err) {
+    console.error('Failed to delete message:', err)
+    throw err
+  }
+}
+
+/* ============================================================
+   SUBSCRIPTIONS — all have error handlers so permission denials
+   are silently ignored instead of crashing the app.
+   ============================================================ */
+
 export async function listMyConversations(uid) {
   const q = query(
     collection(db, 'conversations'),
@@ -222,11 +259,6 @@ export async function listMyConversations(uid) {
   const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
   return sortByLastActivity(items)
 }
-
-/* ============================================================
-   SUBSCRIPTIONS — all have error handlers so permission denials
-   are silently ignored instead of crashing the app.
-   ============================================================ */
 
 export function subscribeConversations(uid, callback) {
   const q = query(
