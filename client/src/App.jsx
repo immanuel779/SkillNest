@@ -68,7 +68,8 @@ import EmployerCandidateAlerts from './pages/EmployerCandidateAlerts'
 import EmployerSettings from './pages/EmployerSettings'
 import AdminCommunity from './pages/AdminCommunity'
 import AdminLanding from './pages/AdminLanding'
-
+import BlogPost from './pages/BlogPost'
+import AdminBlog from './pages/admin/AdminBlog'
 
 function App() {
   useInterviewReminders()
@@ -93,7 +94,6 @@ function App() {
 
         {/* Accept team invite — public so invited users can sign in first */}
         <Route path="accept-invite/:token" element={<AcceptInvite />} />
-        <Route path="/employer/settings" element={<EmployerSettings />} />
 
         {/* Static pages */}
         <Route path="about" element={<About />} />
@@ -102,16 +102,13 @@ function App() {
         <Route path="how-it-works" element={<HowItWorks />} />
         <Route path="careers" element={<Careers />} />
         <Route path="blog" element={<Blog />} />
+        <Route path="blog/:id" element={<BlogPost />} />
         <Route path="help" element={<HelpCenter />} />
         <Route path="privacy" element={<Privacy />} />
         <Route path="terms" element={<Terms />} />
         <Route path="security" element={<Security />} />
         <Route path="resume" element={<ResumeBuilder />} />
-
         <Route path="advertise" element={<Advertise />} />
-        <Route path="/employer/alerts" element={<EmployerCandidateAlerts />} />
-        <Route path="/admin/community" element={<AdminCommunity />} />
-<Route path="/admin/landing" element={<AdminLanding />} />
 
         {/* ============================
             JOB SEEKER
@@ -157,13 +154,13 @@ function App() {
           }
         />
         <Route
-  path="community"
-  element={
-    <ProtectedRoute>
-      <Community />
-    </ProtectedRoute>
-  }
-/>
+          path="community"
+          element={
+            <ProtectedRoute>
+              <Community />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="searches"
           element={
@@ -273,9 +270,11 @@ function App() {
           }
         />
         <Route path="employer/verification" element={<ProtectedRoute allowRoles={['employer']}><EmployerVerification /></ProtectedRoute>} />
-<Route path="employer/candidates" element={<ProtectedRoute allowRoles={['employer']}><EmployerCandidates /></ProtectedRoute>} />
-<Route path="employer/talent-inbox" element={<ProtectedRoute allowRoles={['employer']}><EmployerTalentInbox /></ProtectedRoute>} />
-<Route path="employer/upgrade" element={<ProtectedRoute allowRoles={['employer']}><EmployerUpgrade /></ProtectedRoute>} />
+        <Route path="employer/candidates" element={<ProtectedRoute allowRoles={['employer']}><EmployerCandidates /></ProtectedRoute>} />
+        <Route path="employer/talent-inbox" element={<ProtectedRoute allowRoles={['employer']}><EmployerTalentInbox /></ProtectedRoute>} />
+        <Route path="employer/upgrade" element={<ProtectedRoute allowRoles={['employer']}><EmployerUpgrade /></ProtectedRoute>} />
+        <Route path="employer/settings" element={<ProtectedRoute allowRoles={['employer']}><EmployerSettings /></ProtectedRoute>} />
+        <Route path="employer/alerts" element={<ProtectedRoute allowRoles={['employer']}><EmployerCandidateAlerts /></ProtectedRoute>} />
 
         {/* ============================
             SHARED (any authenticated user)
@@ -322,7 +321,7 @@ function App() {
         />
 
         {/* ============================
-            ADMIN
+            ADMIN (NESTED ROUTES)
             ============================ */}
         <Route
           path="dashboard/admin"
@@ -346,6 +345,11 @@ function App() {
           <Route path="emma" element={<AdminEmma />} />
           <Route path="ad-submissions" element={<AdminAdSubmissions />} />
           <Route path="verifications" element={<AdminVerifications />} />
+          
+          {/* 👇 Admin Dashboard Extras (Moved here to fix layout) 👇 */}
+          <Route path="community" element={<AdminCommunity />} />
+          <Route path="landing" element={<AdminLanding />} />
+          <Route path="blog" element={<AdminBlog />} />
         </Route>
 
         {/* ============================

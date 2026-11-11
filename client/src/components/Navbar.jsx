@@ -66,11 +66,13 @@ export default function Navbar() {
     return unsub
   }, [user])
 
+  // 👇 ADDED BLOG & ADVERTISE HERE 👇
   const publicLinks = [
     { name: 'Find Jobs', path: '/jobs' },
     { name: 'Companies', path: '/companies' },
-    { name: 'For Employers', path: '/' },
-    { name: 'How It Works', path: '/' },
+    { name: 'Blog', path: '/blog' },
+    { name: 'Advertise', path: '/advertise' },
+    { name: 'How It Works', path: '/how-it-works' },
   ]
 
   const roleLinks = (() => {
@@ -359,6 +361,22 @@ export default function Navbar() {
                       {link.name}
                     </Link>
                   ))}
+
+                  {/* Blog & Advertise — mobile */}
+                  <Link
+                    to="/blog"
+                    onClick={close}
+                    className="block px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-white/60 dark:hover:bg-gray-800 font-medium transition-colors"
+                  >
+                    Blog
+                  </Link>
+                  <Link
+                    to="/advertise"
+                    onClick={close}
+                    className="block px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:text-brand-700 dark:hover:text-brand-400 hover:bg-white/60 dark:hover:bg-gray-800 font-medium transition-colors"
+                  >
+                    Advertise
+                  </Link>
 
                   {/* Community — mobile */}
                   <Link
