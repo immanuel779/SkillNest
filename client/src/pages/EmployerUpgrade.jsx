@@ -24,7 +24,6 @@ import { useToast } from '../context/ToastContext'
 
 // YOUR PAYSTACK PUBLIC KEY GOES HERE
 const PAYSTACK_PUBLIC_KEY = 'pk_live_279c98242a3ed48cf4a5e266005fe76d53db0ecb'
-
 const BILLING_CYCLES = [
   { id: 'monthly', label: 'Monthly', months: 1, discount: 0 },
   { id: 'quarterly', label: 'Quarterly', months: 3, discount: 0.1, badge: 'Save 10%' },
