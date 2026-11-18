@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "vite-plugin-sitemap": "^0.11.0"
+  }
+}
